@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { MenuItem, Restaurant, Order, OrderStatus, ChatMessage, Rider, PlatformAnalytics, Review } from './src/types';
 
@@ -1068,7 +1067,9 @@ app.post('/api/ai/recommendations', async (req: Request, res: Response) => {
 // VITE CONTROLLER MIDDLEWARE
 // ==========================================
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    const viteModule = 'vite';
+    const { createServer: createViteServer } = await import(viteModule);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -1082,9 +1083,13 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`FoodRush server online at http://0.0.0.0:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`FoodRush server online at http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
 startServer();
+
+export default app;

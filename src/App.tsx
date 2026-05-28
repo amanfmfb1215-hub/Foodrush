@@ -77,6 +77,7 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [activeRestaurantId, setActiveRestaurantId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [showOrderHistory, setShowOrderHistory] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -643,10 +644,16 @@ export default function App() {
               <aside className="w-60 border-r border-zinc-200 bg-white p-5 flex flex-col gap-6 flex-none hidden lg:flex">
                 <nav className="flex flex-col gap-1.5">
                   <button
-                    onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); }}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${!activeRestaurantId && !activeOrderId ? 'bg-orange-50 text-orange-600' : 'text-zinc-600 hover:bg-zinc-50'}`}
+                    onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(false); }}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${!activeRestaurantId && !activeOrderId && !showOrderHistory ? 'bg-orange-50 text-orange-600' : 'text-zinc-600 hover:bg-zinc-50'}`}
                   >
                     <Compass className="w-4 h-4" /> Discover Restaurants
+                  </button>
+                  <button
+                    onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(true); }}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${showOrderHistory ? 'bg-orange-50 text-orange-600' : 'text-zinc-600 hover:bg-zinc-50'}`}
+                  >
+                    <Clock className="w-4 h-4" /> Order History
                   </button>
 
                   <div className="text-[10px] font-black tracking-wider uppercase text-zinc-400 mt-4 px-4">Your Recent Orders</div>
@@ -658,7 +665,7 @@ export default function App() {
                       {orders.map((order) => (
                         <button
                           key={order.id}
-                          onClick={() => { setActiveOrderId(order.id); setActiveRestaurantId(null); }}
+                          onClick={() => { setActiveOrderId(order.id); setActiveRestaurantId(null); setShowOrderHistory(false); }}
                           className={`flex flex-col text-left px-4 py-2 rounded-xl border transition-all ${activeOrderId === order.id ? 'bg-orange-100/55 border-orange-200 text-orange-950 font-semibold' : 'border-transparent text-zinc-600 hover:bg-zinc-50'}`}
                         >
                           <div className="flex justify-between items-center w-full">
@@ -678,7 +685,7 @@ export default function App() {
                   <h5 className="font-bold text-xs">Unlock 50% Off!</h5>
                   <p className="text-[11px] text-zinc-300 mt-1 mb-2 leading-relaxed">Apply code <span className="font-mono bg-zinc-800 text-yellow-300 px-1 py-0.5 rounded">RUSH50</span> on your draft cart checkout!</p>
                   <button 
-                    onClick={() => { alert('Discount code RUSH50 activated! Simply input on checkout.'); }}
+                    onClick={() => { setPromoCode('RUSH50'); }}
                     className="text-[10px] w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-1.5 rounded-lg transition-colors"
                   >
                     Activate Coupon
@@ -690,7 +697,7 @@ export default function App() {
               <main className="flex-1 p-6 overflow-y-auto flex flex-col gap-6">
                 
                 {/* 1. Discover List View */}
-                {!activeRestaurantId && !activeOrderId && (
+                {!activeRestaurantId && !activeOrderId && !showOrderHistory && (
                   <>
                     {/* Sleek Gradient Banner */}
                     <section id="promo-banner" className="h-44 bg-gradient-to-r from-orange-500 to-rose-500 rounded-3xl p-6.5 flex justify-between items-center text-white relative overflow-hidden flex-none shadow-sm">
@@ -825,6 +832,96 @@ export default function App() {
                       )}
                     </section>
                   </>
+                )}
+
+                {/* 1.5 Order History View */}
+                {showOrderHistory && !activeRestaurantId && !activeOrderId && (
+                  <div className="flex flex-col gap-6">
+                    <section className="bg-white rounded-3xl p-6 shadow-sm border border-zinc-200">
+                      <div className="flex justify-between items-center border-b border-zinc-100 pb-4 mb-4">
+                        <h2 className="text-xl font-black text-slate-800">Order History</h2>
+                      </div>
+                      
+                      {orders.length === 0 ? (
+                        <div className="text-center py-10 text-zinc-400">
+                          <Clock className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                          <p className="font-semibold text-zinc-600">No past orders found.</p>
+                          <p className="text-xs">Explore restaurants and place your first order!</p>
+                          <button
+                            onClick={() => setShowOrderHistory(false)}
+                            className="mt-4 bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-6 rounded-xl transition-colors text-xs"
+                          >
+                            Explore Restaurants
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-4">
+                          {[...orders].reverse().map((order) => {
+                            const rest = restaurants.find(r => r.id === order.restaurantId);
+                            return (
+                              <div key={order.id} className="border border-zinc-100 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:border-zinc-200 hover:shadow-xs transition-all">
+                                <div className="flex items-start gap-4">
+                                  {rest && (
+                                    <div className="w-16 h-16 rounded-xl overflow-hidden flex-none bg-zinc-100">
+                                      <img src={rest.image} alt={rest.name} className="w-full h-full object-cover" />
+                                    </div>
+                                  )}
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2">
+                                      <h3 className="font-extrabold text-slate-800">{order.restaurantName}</h3>
+                                      <span className="text-[10px] bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded uppercase font-bold">{new Date(order.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                    <p className="text-xs text-zinc-500 font-medium">Order #{order.id}</p>
+                                    <p className="text-xs text-zinc-600 mt-1">
+                                      {order.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
+                                    </p>
+                                    <div className="mt-3 flex items-center gap-2">
+                                      <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Stage:</span>
+                                      {(() => {
+                                        switch (order.status) {
+                                          case 'placed':
+                                          case 'accepted':
+                                            return <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200">Processing</span>;
+                                          case 'preparing':
+                                            return <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200">Preparing</span>;
+                                          case 'ready':
+                                            return <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-emerald-200">Prepared</span>;
+                                          case 'dispatched':
+                                          case 'picked_up':
+                                            return <span className="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-200">In Transit</span>;
+                                          case 'delivered':
+                                            return <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-green-200">Arrived</span>;
+                                          case 'cancelled':
+                                            return <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-red-200">Cancelled</span>;
+                                          default:
+                                            return <span className="bg-zinc-100 text-zinc-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-zinc-200">{order.status}</span>;
+                                        }
+                                      })()}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                                  <span className="font-black text-lg text-slate-800">${order.total.toFixed(2)}</span>
+                                  <button
+                                    onClick={() => {
+                                      if (rest) {
+                                        setCart(order.items.map(i => ({ item: rest.menu.find(m => m.name === i.name)!, quantity: i.quantity, restaurantId: rest.id })).filter(i => i.item));
+                                        setActiveRestaurantId(rest.id);
+                                        setShowOrderHistory(false);
+                                      }
+                                    }}
+                                    className="bg-zinc-900 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-xl text-xs w-full sm:w-auto transition-colors"
+                                  >
+                                    Reorder
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </section>
+                  </div>
                 )}
 
                 {/* 2. Restaurant Detail view */}
