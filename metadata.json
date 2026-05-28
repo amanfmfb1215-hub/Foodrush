@@ -1,0 +1,6 @@
+{
+  "name": "FoodRush",
+  "description": "Smart Food Delivery Platform: A modern, real-time food delivery ecosystem connecting customers, restaurants, drivers, and administrators.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
