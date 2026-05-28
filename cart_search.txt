@@ -1,0 +1,44 @@
+43:import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+85:  // Cart & checkout process
+86:  const [cart, setCart] = useState<{ item: MenuItem; quantity: number; restaurantId: string }[]>(() => {
+88:      const cached = localStorage.getItem('foodrush_cart');
+142:    localStorage.setItem('foodrush_cart', JSON.stringify(cart));
+143:  }, [cart]);
+255:  // Cart operations
+256:  const addToCart = (item: MenuItem, restaurantId: string) => {
+257:    setCart((prev) => {
+258:      // Prevent cross restaurant carts
+261:        if (!confirm('You are ordering from a new restaurant! Clear current cart items?')) {
+274:  const updateCartQty = (itemId: string, diff: number) => {
+275:    setCart((prev) => {
+286:  const clearCart = () => setCart([]);
+288:  const getCartTotals = () => {
+289:    const subtotal = cart.reduce((sum, c) => sum + (c.item.price * c.quantity), 0);
+290:    const activeRest = restaurants.find(r => r.id === cart[0]?.restaurantId);
+308:    if (cart.length === 0) return;
+310:    const totals = getCartTotals();
+312:      restaurantId: cart[0].restaurantId,
+313:      items: cart.map(c => ({
+340:        clearCart();
+616:            {/* Micro layout cart pointer trigger */}
+618:              onClick={() => { setCurrentRole('customer'); setActiveRestaurantId(null); if(cart.length > 0) setCheckoutStep(true); }}
+622:              {cart.length > 0 && (
+624:                  {cart.reduce((s, c) => s + c.quantity, 0)}
+687:                  <p className="text-[11px] text-zinc-300 mt-1 mb-2 leading-relaxed">Apply code <span className="font-mono bg-zinc-800 text-yellow-300 px-1 py-0.5 rounded">RUSH50</span> on your draft cart checkout!</p>
+909:                                        setCart(order.items.map(i => ({ item: rest.menu.find(m => m.name === i.name)!, quantity: i.quantity, restaurantId: rest.id })).filter(i => i.item));
+996:                                          onClick={() => addToCart(food, rest.id)}
+999:                                          <Plus className="w-3.5 h-3.5" /> Add to Cart
+1330:                    hasItemsInCart={cart.length > 0}
+1336:              {/* Shopping Cart Drawer */}
+1341:                    <h3 className="font-extrabold text-slate-900 text-sm">Shopping Cart Box</h3>
+1343:                  <button onClick={clearCart} className="text-zinc-400 hover:text-red-500 text-xs font-semibold">Clear All</button>
+1346:                {cart.length === 0 ? (
+1349:                    <p className="text-xs font-bold">Your cart is completely empty</p>
+1355:                      {cart.map((c) => (
+1362:                            <button onClick={() => updateCartQty(c.item.id, -1)} className="p-1 bg-white hover:bg-zinc-100 rounded border border-zinc-200">
+1366:                            <button onClick={() => updateCartQty(c.item.id, 1)} className="p-1 bg-white hover:bg-zinc-100 rounded border border-zinc-200">
+1398:                        const { subtotal, deliveryFee, tax, discount, grandTotal } = getCartTotals();
+1795:                    hasItemsInCart={cart.length > 0}
+1943:                    hasItemsInCart={cart.length > 0}
+2024:                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+2182:                  hasItemsInCart={cart.length > 0}

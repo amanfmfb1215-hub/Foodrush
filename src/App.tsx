@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { MenuItem, Restaurant, Order, OrderStatus, ChatMessage, Rider, PlatformAnalytics, Review, OrderItem } from './types';
 import AppFooter from './components/AppFooter';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const API_KEY =
   process.env.GOOGLE_MAPS_PLATFORM_KEY ||
@@ -78,6 +79,7 @@ export default function App() {
   const [activeRestaurantId, setActiveRestaurantId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [showOrderHistory, setShowOrderHistory] = useState<boolean>(false);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -614,7 +616,7 @@ export default function App() {
 
             {/* Micro layout cart pointer trigger */}
             <button 
-              onClick={() => { setCurrentRole('customer'); setActiveRestaurantId(null); if(cart.length > 0) setCheckoutStep(true); }}
+              onClick={() => { setCurrentRole('customer'); setIsCartOpen(!isCartOpen); }}
               className="relative p-2 text-zinc-600 bg-zinc-100 rounded-full hover:bg-zinc-200/80 transition-all"
             >
               <ShoppingBag className="w-5 h-5 text-zinc-700" />
@@ -905,9 +907,16 @@ export default function App() {
                                   <button
                                     onClick={() => {
                                       if (rest) {
-                                        setCart(order.items.map(i => ({ item: rest.menu.find(m => m.name === i.name)!, quantity: i.quantity, restaurantId: rest.id })).filter(i => i.item));
-                                        setActiveRestaurantId(rest.id);
-                                        setShowOrderHistory(false);
+                                        if (rest.isOpen) {
+                                          setCart(order.items.map(i => ({ item: rest.menu.find(m => m.name === i.name)!, quantity: i.quantity, restaurantId: rest.id })).filter(i => i.item));
+                                          setActiveRestaurantId(rest.id);
+                                          setShowOrderHistory(false);
+                                          setIsCartOpen(true);
+                                        } else {
+                                          alert('Sorry, this restaurant is currently closed. Please try ordering again during their operating hours.');
+                                        }
+                                      } else {
+                                        alert('Restaurant no longer available.');
                                       }
                                     }}
                                     className="bg-zinc-900 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-xl text-xs w-full sm:w-auto transition-colors"
@@ -1332,15 +1341,24 @@ export default function App() {
 
               </main>
 
-              {/* Shopping Cart Drawer */}
-              <aside className="w-80 border-l border-zinc-200 bg-white p-5 flex flex-col gap-5 flex-none hidden xl:flex">
-                <div className="flex justify-between items-center border-b border-zinc-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <ShoppingBag className="w-5 h-5 text-orange-600" />
-                    <h3 className="font-extrabold text-slate-900 text-sm">Shopping Cart Box</h3>
+                {/* Mobile Cart Overlay Background */}
+                {isCartOpen && (
+                  <div className="fixed inset-0 bg-black/50 z-40 xl:hidden backdrop-blur-sm transition-opacity" onClick={() => setIsCartOpen(false)} />
+                )}
+                {/* Shopping Cart Drawer */}
+                <aside className={`w-80 border-l border-zinc-200 bg-white p-5 flex flex-col gap-5 flex-none fixed inset-y-0 right-0 z-50 xl:relative xl:z-0 xl:translate-x-0 transition-transform duration-300 ${isCartOpen ? 'translate-x-0 shadow-2xl xl:shadow-none' : 'translate-x-full xl:translate-x-0'}`}>
+                  <div className="flex justify-between items-center border-b border-zinc-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <ShoppingBag className="w-5 h-5 text-orange-600" />
+                      <h3 className="font-extrabold text-slate-900 text-sm">Shopping Cart Box</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={clearCart} className="text-zinc-400 hover:text-red-500 text-xs font-semibold">Clear All</button>
+                      <button onClick={() => setIsCartOpen(false)} className="text-zinc-400 hover:text-zinc-900 xl:hidden">
+                        ✕
+                      </button>
+                    </div>
                   </div>
-                  <button onClick={clearCart} className="text-zinc-400 hover:text-red-500 text-xs font-semibold">Clear All</button>
-                </div>
 
                 {cart.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center text-zinc-400 p-4 gap-2">
@@ -2015,28 +2033,23 @@ export default function App() {
                   {/* High fidelity inline responsive SVG graphs and charts */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="bg-white p-5 rounded-3xl border border-zinc-200 shadow-sm">
-                      <h4 className="font-extrabold text-xs uppercase tracking-widest text-[#242424] mb-3">Daily Sales Stream Chart</h4>
+                      <h4 className="font-extrabold text-xs uppercase tracking-widest text-[#242424] mb-3">Daily Order Volume Chart</h4>
                       
-                      {/* Premium responsive bar diagram inside SVG */}
-                      <svg className="w-full h-44 border-b border-zinc-150 pb-2 overflow-visible" xmlns="http://www.w3.org/2000/svg">
-                        <line x1="0" y1="120" x2="100%" y2="120" stroke="#e2e8f0" strokeWidth="1" />
-                        <line x1="0" y1="60" x2="100%" y2="60" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,3" />
-                        
-                        {/* Simulation values */}
-                        <polyline
-                          fill="none"
-                          stroke="#ea580c"
-                          strokeWidth="3.5"
-                          points="30,120 100,80 180,95 260,50 340,30 420,10"
-                          className="animate-pulse"
-                        />
-                        <circle cx="30" cy="120" r="4.5" fill="#f97316" />
-                        <circle cx="100" cy="80" r="4.5" fill="#f97316" />
-                        <circle cx="260" cy="50" r="4.5" fill="#f97316" />
-                        <text x="30" y="140" fill="#94a3b8" fontSize="9" fontWeight="bold">Mon</text>
-                        <text x="180" y="140" fill="#94a3b8" fontSize="9" fontWeight="bold">Wed</text>
-                        <text x="340" y="140" fill="#94a3b8" fontSize="9" fontWeight="bold">Fri</text>
-                      </svg>
+                      <div className="w-full h-44">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={analytics.salesData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 'bold' }} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 'bold' }} dx={-10} />
+                            <Tooltip 
+                              cursor={{ stroke: '#f1f5f9', strokeWidth: 2 }}
+                              contentStyle={{ borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }} 
+                              itemStyle={{ color: '#ea580c' }} 
+                            />
+                            <Line type="monotone" dataKey="orders" name="Total Orders" stroke="#ea580c" strokeWidth={3.5} dot={{ r: 4.5, fill: '#f97316', strokeWidth: 0 }} activeDot={{ r: 6, fill: '#ea580c', strokeWidth: 0 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
 
                     <div className="bg-white p-5 rounded-3xl border border-zinc-200 shadow-sm flex flex-col">
