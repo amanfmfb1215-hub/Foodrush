@@ -2256,7 +2256,8 @@ export default function App() {
               className="bg-orange-600 hover:bg-orange-700 text-white p-2.5 rounded-xl text-xs font-black shadow-sm transition-colors"
             >
               <Send className="w-4 h-4" />
-            </button>
+          </button>
+          </div>
         </div>
       )}
       </div>
