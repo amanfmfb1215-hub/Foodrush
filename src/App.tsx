@@ -586,6 +586,7 @@ export default function App() {
               <span className="text-xs font-semibold text-zinc-800">Seattle HQ • 4th Avenue</span>
               <span className="text-[10px] text-zinc-400 bg-white px-2 py-0.5 rounded-full border border-zinc-200">Suite 404</span>
            </div>
+          </div>
           <div className="flex-1 max-w-sm mx-8 hidden sm:block">
             <div className="relative">
               <input
@@ -2196,7 +2197,8 @@ export default function App() {
           </div>
        )}
         </div>
-      </header>
+      </div>
+    </header>
       {/* ==========================================
           INTELLIGENT AI RECOMMENDATION CHAT DRAWER (POPUP)
           ========================================== */}
@@ -2259,8 +2261,9 @@ export default function App() {
           </button>
           </div>
         </div>
-      )}
-      </div>
+)}
     </div>
+  </div>
+</div>
   );
 }
