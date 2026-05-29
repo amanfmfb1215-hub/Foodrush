@@ -2257,8 +2257,7 @@ export default function App() {
             >
               <Send className="w-4 h-4" />
             </button>
-          </div>
-       </div>
+        </div>
       )}
       </div>
     </div>
