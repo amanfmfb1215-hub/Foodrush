@@ -2125,43 +2125,12 @@ export default function App() {
                 </div>
               )}
 
-              {/* 3. Transaction Ledger log */}
-              {selectedAdminTab === 'live-orders' && (
-                <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-zinc-50 border-b border-zinc-150 font-extrabold text-[#111]">
-                        <th className="p-4">ID</th>
-                        <th className="p-4">Outlets Spot</th>
-                        <th className="p-4">Customer info</th>
-                        <th className="p-4">Amount (USD)</th>
-                        <th className="p-4">State Timeline</th>
-                        <th className="p-4 text-right">Courier Driver</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((order) => (
-                        <tr key={order.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
-                          <td className="p-4 font-mono text-zinc-500 uppercase">#{order.id}</td>
-                          <td className="p-4 font-bold text-slate-950">{order.restaurantName}</td>
-                          <td className="p-4">
-                            <div className="font-bold text-zinc-800">{order.customerName}</div>
-                            <div className="text-[10px] text-zinc-400">{order.customerAddress}</div>
-                          </td>
-                          <td className="p-4 font-mono font-bold text-orange-600">${order.total.toFixed(2)}</td>
-                          <td className="p-4">
-                            <span className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide">{order.status}</span>
-                          </td>
-                          <td className="p-4 text-right text-zinc-600 font-bold">{order.riderName || 'Awaiting Assign'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+             </tbody>
+</table>
+</div>
+)}
 
-            ```tsx
-{/* Admin Page Premium Footer */}
+/* Admin Page Premium Footer */
 <div className="pt-12 mt-auto">
   <AppFooter
     currentRole={currentRole}
@@ -2180,6 +2149,7 @@ export default function App() {
       const activeOr = orders.find(
         o => o.status !== 'delivered' && o.status !== 'cancelled'
       );
+
       if (activeOr) {
         setActiveOrderId(activeOr.id);
         setActiveRestaurantId(null);
@@ -2187,6 +2157,7 @@ export default function App() {
         setActiveOrderId(orders[orders.length - 1].id);
         setActiveRestaurantId(null);
       }
+
       setCurrentRole('customer');
     }}
     onOpenAssistant={() => {
@@ -2200,28 +2171,12 @@ export default function App() {
   />
 </div>
 
-</header>
-
-{/* ==========================================
-    INTELLIGENT AI RECOMMENDATION CHAT DRAWER (POPUP)
-    ========================================== */}
+{/* CHAT DRAWER */}
 {chatbotOpen && (
   <div
     id="ai-chat-drawer"
-    className="fixed bottom-6 right-6 z-50 w-96 bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col h-[480px]"
+    className="fixed bottom-6 right-6 z-50 w-96 h-[480px] bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col"
   >
-    {/* AI Banner head */}
-    <div className="bg-gradient-to-r from-orange-500 to-rose-500 p-4 text-white flex justify-between items-center flex-none">
-      <div className="flex items-center gap-2">
-        <Sparkles className="w-5 h-5 text-white animate-pulse" />
-        <div>
-          <h4 className="font-extrabold text-sm">FoodRush Assistant</h4>
-          <p className="text-[10px] text-orange-100">
-            Smart meal suggestions & orders
-          </p>
-        </div>
-      </div>
-
       <button
         onClick={() => setChatbotOpen(false)}
         className="text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors"
