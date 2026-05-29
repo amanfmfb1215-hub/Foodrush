@@ -2160,110 +2160,131 @@ export default function App() {
                 </div>
               )}
 
-              {/* Admin Page Premium Footer */}
-              <div className="pt-12 mt-auto">
-                <AppFooter
-                  currentRole={currentRole}
-                  onChangeRole={setCurrentRole}
-                  onSelectRestaurant={(id) => {
-                    setActiveRestaurantId(id);
-                    setActiveOrderId(null);
-                    setCurrentRole('customer');
-                  }}
-                  onNavigateHome={() => {
-                    setActiveRestaurantId(null);
-                    setActiveOrderId(null);
-                    setCurrentRole('customer');
-                  }}
-                  onNavigateTracking={() => {
-                    const activeOr = orders.find(o => o.status !== 'delivered' && o.status !== 'cancelled');
-                    if (activeOr) {
-                      setActiveOrderId(activeOr.id);
-                      setActiveRestaurantId(null);
-                    } else if (orders.length > 0) {
-                      setActiveOrderId(orders[orders.length - 1].id);
-                      setActiveRestaurantId(null);
-                    }
-                    setCurrentRole('customer');
-                  }}
-                  onOpenAssistant={() => {
-                    setCurrentRole('customer');
-                    setChatbotOpen(true);
-                  }}
-                  hasActiveOrder={orders.some(o => o.status !== 'delivered' && o.status !== 'cancelled')}
-                  hasItemsInCart={cart.length > 0}
-                />
-           </div>
-          </div>
-       )}
+            ```tsx
+{/* Admin Page Premium Footer */}
+<div className="pt-12 mt-auto">
+  <AppFooter
+    currentRole={currentRole}
+    onChangeRole={setCurrentRole}
+    onSelectRestaurant={(id) => {
+      setActiveRestaurantId(id);
+      setActiveOrderId(null);
+      setCurrentRole('customer');
+    }}
+    onNavigateHome={() => {
+      setActiveRestaurantId(null);
+      setActiveOrderId(null);
+      setCurrentRole('customer');
+    }}
+    onNavigateTracking={() => {
+      const activeOr = orders.find(
+        o => o.status !== 'delivered' && o.status !== 'cancelled'
+      );
+      if (activeOr) {
+        setActiveOrderId(activeOr.id);
+        setActiveRestaurantId(null);
+      } else if (orders.length > 0) {
+        setActiveOrderId(orders[orders.length - 1].id);
+        setActiveRestaurantId(null);
+      }
+      setCurrentRole('customer');
+    }}
+    onOpenAssistant={() => {
+      setCurrentRole('customer');
+      setChatbotOpen(true);
+    }}
+    hasActiveOrder={orders.some(
+      o => o.status !== 'delivered' && o.status !== 'cancelled'
+    )}
+    hasItemsInCart={cart.length > 0}
+  />
+</div>
+
+</header>
+
+{/* ==========================================
+    INTELLIGENT AI RECOMMENDATION CHAT DRAWER (POPUP)
+    ========================================== */}
+{chatbotOpen && (
+  <div
+    id="ai-chat-drawer"
+    className="fixed bottom-6 right-6 z-50 w-96 bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col h-[480px]"
+  >
+    {/* AI Banner head */}
+    <div className="bg-gradient-to-r from-orange-500 to-rose-500 p-4 text-white flex justify-between items-center flex-none">
+      <div className="flex items-center gap-2">
+        <Sparkles className="w-5 h-5 text-white animate-pulse" />
+        <div>
+          <h4 className="font-extrabold text-sm">FoodRush Assistant</h4>
+          <p className="text-[10px] text-orange-100">
+            Smart meal suggestions & orders
+          </p>
         </div>
       </div>
-    </header>
-      {/* ==========================================
-          INTELLIGENT AI RECOMMENDATION CHAT DRAWER (POPUP)
-          ========================================== */}
-      {chatbotOpen && (
-        <div id="ai-chat-drawer" className="fixed bottom-6 right-6 z-50 w-96 bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col h-[480px]">
-          
-          {/* AI Banner head */}
-          <div className="bg-gradient-to-r from-orange-500 to-rose-500 p-4 text-white flex justify-between items-center flex-none">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-white animate-pulse" />
-              <div>
-                <h4 className="font-extrabold text-sm">FoodRush Assistant</h4>
-                <p className="text-[10px] text-orange-100">Smart meal suggestions & orders</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setChatbotOpen(false)}
-              className="text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
 
-          {/* Messages list */}
-          <div className="flex-1 p-4 overflow-y-auto bg-zinc-50 flex flex-col gap-3">
-            <div className="bg-white p-3 rounded-2xl border border-zinc-200 text-xs text-zinc-800 leading-relaxed font-semibold">
-              <p>👋 Hello Aman! I am your <strong>FoodRush Smart Assistant</strong>.</p>
-              <p className="mt-1">I have direct access to our live restaurants catalog. Ask me to recommend dishes or design a custom combination order!</p>
-            </div>
-            {aiChatHistory.map((hist, idx) => (
-              <div
-                key={idx}
-                className={`p-3 rounded-2xl text-xs max-w-[85%] font-medium leading-relaxed ${hist.sender === 'customer' ? 'bg-orange-600 text-white self-end rounded-tr-none' : 'bg-white text-zinc-900 border border-zinc-150 self-start rounded-tl-none shadow-sm'}`}
-              >
-                <p>{hist.message}</p>
-              </div>
-            ))}
-            {aiLoading && (
-              <div className="bg-white p-3 rounded-2xl border border-zinc-150 text-xs text-zinc-400 self-start animate-pulse flex items-center gap-1.5 font-bold">
-                <Sparkles className="w-3.5 h-3.5 animate-spin" /> Thinking of culinary ideas...
-              </div>
-            )}
-          </div>
+      <button
+        onClick={() => setChatbotOpen(false)}
+        className="text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
 
-          {/* Message input bar */}
-          <div className="p-3 border-t border-zinc-200 bg-white flex gap-2 flex-none">
-            <input
-              type="text"
-              placeholder="Ask for low calorie acai, burgers..."
-              value={aiMessageInput}
-              onChange={(e) => setAiMessageInput(e.target.value)}
-              className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-1.5 text-xs focus:ring-1 focus:ring-orange-500 text-slate-900 focus:outline-none"
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAskAI(); }}
-            />
-            <button
-              onClick={handleAskAI}
-              className="bg-orange-600 hover:bg-orange-700 text-white p-2.5 rounded-xl text-xs font-black shadow-sm transition-colors"
-            >
-              <Send className="w-4 h-4" />
-          </button>
-          </div>
+    {/* Messages list */}
+    <div className="flex-1 p-4 overflow-y-auto bg-zinc-50 flex flex-col gap-3">
+      <div className="bg-white p-3 rounded-2xl border border-zinc-200 text-xs text-zinc-800 leading-relaxed font-semibold">
+        <p>👋 Hello Aman! I am your <strong>FoodRush Smart Assistant</strong>.</p>
+        <p className="mt-1">
+          I have direct access to our live restaurants catalog. Ask me to
+          recommend dishes or design a custom combination order!
+        </p>
+      </div>
+
+      {aiChatHistory.map((hist, idx) => (
+        <div
+          key={idx}
+          className={`p-3 rounded-2xl text-xs max-w-[85%] font-medium leading-relaxed ${
+            hist.sender === "customer"
+              ? "bg-orange-600 text-white self-end rounded-tr-none"
+              : "bg-white text-zinc-900 border border-zinc-150 self-start rounded-tl-none shadow-sm"
+          }`}
+        >
+          <p>{hist.message}</p>
         </div>
-)}
+      ))}
+
+      {aiLoading && (
+        <div className="bg-white p-3 rounded-2xl border border-zinc-150 text-xs text-zinc-400 self-start animate-pulse flex items-center gap-1.5 font-bold">
+          <Sparkles className="w-3.5 h-3.5 animate-spin" />
+          Thinking of culinary ideas...
+        </div>
+      )}
+    </div>
+
+    {/* Message input bar */}
+    <div className="p-3 border-t border-zinc-200 bg-white flex gap-2 flex-none">
+      <input
+        type="text"
+        placeholder="Ask for low calorie acai, burgers..."
+        value={aiMessageInput}
+        onChange={(e) => setAiMessageInput(e.target.value)}
+        className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-1.5 text-xs focus:ring-1 focus:ring-orange-500 text-slate-900 focus:outline-none"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleAskAI();
+        }}
+      />
+
+      <button
+        onClick={handleAskAI}
+        className="bg-orange-600 hover:bg-orange-700 text-white p-2.5 rounded-xl text-xs font-black shadow-sm transition-colors"
+      >
+        <Send className="w-4 h-4" />
+      </button>
     </div>
   </div>
+)}
+
 </div>
-  );
-}
+</div>
+</div>
+```
