@@ -585,9 +585,7 @@ export default function App() {
               <MapPin className="w-4 h-4 text-orange-600" />
               <span className="text-xs font-semibold text-zinc-800">Seattle HQ • 4th Avenue</span>
               <span className="text-[10px] text-zinc-400 bg-white px-2 py-0.5 rounded-full border border-zinc-200">Suite 404</span>
-            </div>
-          </div>
-
+           </div>
           <div className="flex-1 max-w-sm mx-8 hidden sm:block">
             <div className="relative">
               <input
