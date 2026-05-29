@@ -2228,7 +2228,6 @@ export default function App() {
               <p>👋 Hello Aman! I am your <strong>FoodRush Smart Assistant</strong>.</p>
               <p className="mt-1">I have direct access to our live restaurants catalog. Ask me to recommend dishes or design a custom combination order!</p>
             </div>
-
             {aiChatHistory.map((hist, idx) => (
               <div
                 key={idx}
@@ -2237,7 +2236,6 @@ export default function App() {
                 <p>{hist.message}</p>
               </div>
             ))}
-
             {aiLoading && (
               <div className="bg-white p-3 rounded-2xl border border-zinc-150 text-xs text-zinc-400 self-start animate-pulse flex items-center gap-1.5 font-bold">
                 <Sparkles className="w-3.5 h-3.5 animate-spin" /> Thinking of culinary ideas...
@@ -2262,8 +2260,8 @@ export default function App() {
               <Send className="w-4 h-4" />
             </button>
           </div>
-
         </div>
-)}
+      )}
+    </div>
   );
 }
