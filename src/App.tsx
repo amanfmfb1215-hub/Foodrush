@@ -2194,11 +2194,10 @@ export default function App() {
                   hasActiveOrder={orders.some(o => o.status !== 'delivered' && o.status !== 'cancelled')}
                   hasItemsInCart={cart.length > 0}
                 />
-              </div>
-
+             </div>
             </div>
-       )}
-        </div>
+          )}
+        </header>
       </div>
 
       {/* ==========================================
