@@ -36,12 +36,14 @@ import {
   ThumbsUp,
   ChevronRight,
   Check,
-  Phone
+  Phone,
+  Flame
 } from 'lucide-react';
 import { MenuItem, Restaurant, Order, OrderStatus, ChatMessage, Rider, PlatformAnalytics, Review, OrderItem } from './types';
 import AppFooter from './components/AppFooter';
 import OrderTimer from './components/OrderTimer';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { STATIC_FALLBACK_RESTAURANTS, STATIC_FALLBACK_RIDERS, STATIC_FALLBACK_ANALYTICS } from './fallbackData';
 
 const API_KEY =
   process.env.GOOGLE_MAPS_PLATFORM_KEY ||
@@ -187,16 +189,55 @@ export default function App() {
         console.warn('Failed to parse cached data', e);
       }
 
-      const [restRes, ordersRes, ridersRes, analyticsRes] = await Promise.all([
-        fetch('/api/restaurants'),
-        fetch('/api/orders'),
-        fetch('/api/riders'),
-        fetch('/api/admin/analytics')
-      ]);
-      const restData = await safeJson(restRes);
-      const ordersData = await safeJson(ordersRes);
-      const ridersData = await safeJson(ridersRes);
-      const analyticsData = await safeJson(analyticsRes);
+      // 1. Fetch Restaurants
+      let restData = [];
+      try {
+        const res = await fetch('/api/restaurants');
+        restData = await safeJson(res);
+        if (!Array.isArray(restData) || restData.length === 0) {
+          throw new Error('Restaurants response is empty or invalid.');
+        }
+      } catch (err) {
+        console.warn('Failed to fetch from /api/restaurants, using local fallback seeds.', err);
+        const cached = localStorage.getItem('foodrush_restaurants');
+        restData = cached ? JSON.parse(cached) : STATIC_FALLBACK_RESTAURANTS;
+      }
+
+      // 2. Fetch Orders
+      let ordersData = [];
+      try {
+        const res = await fetch('/api/orders');
+        ordersData = await safeJson(res);
+      } catch (err) {
+        console.warn('Failed to fetch from /api/orders, using cached or empty.', err);
+        const cached = localStorage.getItem('foodrush_orders');
+        ordersData = cached ? JSON.parse(cached) : [];
+      }
+
+      // 3. Fetch Riders
+      let ridersData = [];
+      try {
+        const res = await fetch('/api/riders');
+        ridersData = await safeJson(res);
+        if (!Array.isArray(ridersData) || ridersData.length === 0) {
+          throw new Error('Riders response is empty or invalid.');
+        }
+      } catch (err) {
+        console.warn('Failed to fetch from /api/riders, using fallback seeds.', err);
+        const cached = localStorage.getItem('foodrush_riders');
+        ridersData = cached ? JSON.parse(cached) : STATIC_FALLBACK_RIDERS;
+      }
+
+      // 4. Fetch Analytics
+      let analyticsData = null;
+      try {
+        const res = await fetch('/api/admin/analytics');
+        analyticsData = await safeJson(res);
+      } catch (err) {
+        console.warn('Failed to fetch from /api/admin/analytics, using default analytics.', err);
+        const cached = localStorage.getItem('foodrush_analytics');
+        analyticsData = cached ? JSON.parse(cached) : STATIC_FALLBACK_ANALYTICS;
+      }
 
       setRestaurants(restData);
       setOrders(ordersData);
@@ -204,12 +245,16 @@ export default function App() {
       setAnalytics(analyticsData);
 
       // Update cache
-      localStorage.setItem('foodrush_restaurants', JSON.stringify(restData));
-      localStorage.setItem('foodrush_orders', JSON.stringify(ordersData));
-      localStorage.setItem('foodrush_riders', JSON.stringify(ridersData));
-      localStorage.setItem('foodrush_analytics', JSON.stringify(analyticsData));
+      try {
+        localStorage.setItem('foodrush_restaurants', JSON.stringify(restData));
+        localStorage.setItem('foodrush_orders', JSON.stringify(ordersData));
+        localStorage.setItem('foodrush_riders', JSON.stringify(ridersData));
+        localStorage.setItem('foodrush_analytics', JSON.stringify(analyticsData));
+      } catch (cacheErr) {
+        console.warn('Failed to update localStorage cache', cacheErr);
+      }
     } catch (e) {
-      console.warn('Error loading API seeds, waiting for server...', e);
+      console.warn('Error loading API seeds', e);
     } finally {
       setLoading(false);
     }
@@ -217,27 +262,50 @@ export default function App() {
 
   const silentSyncData = async () => {
     try {
-      const [restRes, ordersRes, ridersRes, analyticsRes] = await Promise.all([
-        fetch('/api/restaurants'),
-        fetch('/api/orders'),
-        fetch('/api/riders'),
-        fetch('/api/admin/analytics')
-      ]);
-      const restData = await safeJson(restRes);
-      const ordersData = await safeJson(ordersRes);
-      const ridersData = await safeJson(ridersRes);
-      const analyticsData = await safeJson(analyticsRes);
+      // 1. Fetch Restaurants
+      let restData = null;
+      try {
+        const res = await fetch('/api/restaurants');
+        restData = await safeJson(res);
+      } catch (e) {}
 
-      setRestaurants(restData);
-      setOrders(ordersData);
-      setRiders(ridersData);
-      setAnalytics(analyticsData);
+      // 2. Fetch Orders
+      let ordersData = null;
+      try {
+        const res = await fetch('/api/orders');
+        ordersData = await safeJson(res);
+      } catch (e) {}
 
-      // Silently update cache
-      localStorage.setItem('foodrush_restaurants', JSON.stringify(restData));
-      localStorage.setItem('foodrush_orders', JSON.stringify(ordersData));
-      localStorage.setItem('foodrush_riders', JSON.stringify(ridersData));
-      localStorage.setItem('foodrush_analytics', JSON.stringify(analyticsData));
+      // 3. Fetch Riders
+      let ridersData = null;
+      try {
+        const res = await fetch('/api/riders');
+        ridersData = await safeJson(res);
+      } catch (e) {}
+
+      // 4. Fetch Analytics
+      let analyticsData = null;
+      try {
+        const res = await fetch('/api/admin/analytics');
+        analyticsData = await safeJson(res);
+      } catch (e) {}
+
+      if (restData && Array.isArray(restData) && restData.length > 0) {
+        setRestaurants(restData);
+        localStorage.setItem('foodrush_restaurants', JSON.stringify(restData));
+      }
+      if (ordersData && Array.isArray(ordersData)) {
+        setOrders(ordersData);
+        localStorage.setItem('foodrush_orders', JSON.stringify(ordersData));
+      }
+      if (ridersData && Array.isArray(ridersData) && ridersData.length > 0) {
+        setRiders(ridersData);
+        localStorage.setItem('foodrush_riders', JSON.stringify(ridersData));
+      }
+      if (analyticsData) {
+        setAnalytics(analyticsData);
+        localStorage.setItem('foodrush_analytics', JSON.stringify(analyticsData));
+      }
     } catch (e) {
       // Gracefully silent during minor reloads
     }
@@ -597,12 +665,9 @@ export default function App() {
         <header id="app-header" className="h-20 bg-white border-b border-zinc-200 px-6 flex items-center justify-between flex-none">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2">
-              <img 
-                src="https://kommodo.ai/i/NrZ2JNGDqX4cD2NIEhZX" 
-                alt="Logo" 
-                className="w-10 h-10 rounded-xl object-cover shadow-md" 
-                referrerPolicy="no-referrer" 
-              />
+              <div id="brand-logo" className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 via-red-500 to-rose-600 flex items-center justify-center shadow-md shadow-orange-500/15 flex-shrink-0 border border-orange-400/20">
+                <Flame className="w-5 h-5 text-white fill-amber-300" />
+              </div>
               <span className="text-2xl font-black tracking-tighter text-orange-600">FoodRush</span>
             </div>
             

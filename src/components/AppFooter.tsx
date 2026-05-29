@@ -11,7 +11,8 @@ import {
   MapPin,
   Mail,
   ArrowRight,
-  Heart
+  Heart,
+  Flame
 } from 'lucide-react';
 
 interface AppFooterProps {
@@ -46,7 +47,9 @@ export default function AppFooter({
         {/* Brand Column */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <img src="https://kommodo.ai/i/NrZ2JNGDqX4cD2NIEhZX" alt="Logo" className="w-8 h-8 rounded-xl object-cover shadow-md" referrerPolicy="no-referrer" />
+            <div id="footer-brand-logo" className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 via-red-500 to-rose-600 flex items-center justify-center shadow-md shadow-orange-500/15 flex-shrink-0 border border-orange-400/20">
+              <Flame className="w-4 h-4 text-white fill-amber-300" />
+            </div>
             <div>
               <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-1.5">
                 FoodRush <span className="text-[10px] bg-orange-500/20 text-orange-400 font-extrabold px-1.5 py-0.5 rounded tracking-wide uppercase">PREMIUM</span>

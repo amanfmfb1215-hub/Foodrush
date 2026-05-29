@@ -680,12 +680,20 @@ function getAIInstance() {
 // REST ENDPOINTS
 // ==========================================
 
+// Rewrite middleware to handle Vercel routing variations
+app.use((req, res, next) => {
+  if (req.url && !req.url.startsWith('/api') && req.url !== '/' && !req.url.includes('.')) {
+    req.url = '/api' + (req.url.startsWith('/') ? '' : '/') + req.url;
+  }
+  next();
+});
+
 // 1. Restaurant endpoints
-app.get('/api/restaurants', (req: Request, res: Response) => {
+app.get(['/api/restaurants', '/restaurants'], (req: Request, res: Response) => {
   res.json(INITIAL_RESTAURANTS);
 });
 
-app.post('/api/restaurants', (req: Request, res: Response) => {
+app.post(['/api/restaurants', '/restaurants'], (req: Request, res: Response) => {
   const newRest: Partial<Restaurant> = req.body;
   const restaurant: Restaurant = {
     id: `rest-${Date.now()}`,
@@ -710,7 +718,7 @@ app.post('/api/restaurants', (req: Request, res: Response) => {
 });
 
 // Verification trigger
-app.patch('/api/restaurants/:id/verify', (req: Request, res: Response) => {
+app.patch(['/api/restaurants/:id/verify', '/restaurants/:id/verify'], (req: Request, res: Response) => {
   const rest = INITIAL_RESTAURANTS.find(r => r.id === req.params.id);
   if (!rest) {
     res.status(404).json({ error: 'Restaurant not found' });
@@ -721,7 +729,7 @@ app.patch('/api/restaurants/:id/verify', (req: Request, res: Response) => {
 });
 
 // Update Menu items
-app.post('/api/restaurants/:id/menu', (req: Request, res: Response) => {
+app.post(['/api/restaurants/:id/menu', '/restaurants/:id/menu'], (req: Request, res: Response) => {
   const rest = INITIAL_RESTAURANTS.find(r => r.id === req.params.id);
   if (!rest) {
     res.status(404).json({ error: 'Restaurant not found' });
@@ -744,7 +752,7 @@ app.post('/api/restaurants/:id/menu', (req: Request, res: Response) => {
 });
 
 // Availability toggle
-app.patch('/api/restaurants/:id/menu/:itemId', (req: Request, res: Response) => {
+app.patch(['/api/restaurants/:id/menu/:itemId', '/restaurants/:id/menu/:itemId'], (req: Request, res: Response) => {
   const rest = INITIAL_RESTAURANTS.find(r => r.id === req.params.id);
   if (!rest) {
     res.status(404).json({ error: 'Restaurant not found' });
@@ -765,11 +773,11 @@ app.patch('/api/restaurants/:id/menu/:itemId', (req: Request, res: Response) => 
 });
 
 // 2. Orders endpoints
-app.get('/api/orders', (req: Request, res: Response) => {
+app.get(['/api/orders', '/orders'], (req: Request, res: Response) => {
   res.json(ORDERS);
 });
 
-app.post('/api/orders', (req: Request, res: Response) => {
+app.post(['/api/orders', '/orders'], (req: Request, res: Response) => {
   const { restaurantId, items, customerName, customerAddress, customerPhone, paymentMethod, tip, deliveryNote } = req.body;
   const rest = INITIAL_RESTAURANTS.find(r => r.id === restaurantId);
   if (!rest) {
@@ -822,7 +830,7 @@ app.post('/api/orders', (req: Request, res: Response) => {
 });
 
 // Handle Order status updates
-app.patch('/api/orders/:id', (req: Request, res: Response) => {
+app.patch(['/api/orders/:id', '/orders/:id'], (req: Request, res: Response) => {
   const order = ORDERS.find(o => o.id === req.params.id);
   if (!order) {
     res.status(404).json({ error: 'Order not found' });
@@ -888,7 +896,7 @@ app.patch('/api/orders/:id', (req: Request, res: Response) => {
   res.json(order);
 });
 
-app.patch('/api/orders/:id/rating', (req: Request, res: Response) => {
+app.patch(['/api/orders/:id/rating', '/orders/:id/rating'], (req: Request, res: Response) => {
   const { id } = req.params;
   const { rating } = req.body;
   const order = ORDERS.find(o => o.id === id);
@@ -899,7 +907,7 @@ app.patch('/api/orders/:id/rating', (req: Request, res: Response) => {
 });
 
 // Add Review to Restaurant
-app.post('/api/restaurants/:id/reviews', (req: Request, res: Response) => {
+app.post(['/api/restaurants/:id/reviews', '/restaurants/:id/reviews'], (req: Request, res: Response) => {
   const rest = INITIAL_RESTAURANTS.find(r => r.id === req.params.id);
   if (!rest) {
     res.status(444).json({ error: 'Not found' });
@@ -924,12 +932,12 @@ app.post('/api/restaurants/:id/reviews', (req: Request, res: Response) => {
 });
 
 // 3. Messages Endpoints
-app.get('/api/orders/:id/chat', (req: Request, res: Response) => {
+app.get(['/api/orders/:id/chat', '/orders/:id/chat'], (req: Request, res: Response) => {
   const msgs = MESSAGES.filter(m => m.orderId === req.params.id);
   res.json(msgs);
 });
 
-app.post('/api/orders/:id/chat', (req: Request, res: Response) => {
+app.post(['/api/orders/:id/chat', '/orders/:id/chat'], (req: Request, res: Response) => {
   const { sender, message } = req.body;
   const newMsg: ChatMessage = {
     id: `msg-${Date.now()}`,
@@ -943,11 +951,11 @@ app.post('/api/orders/:id/chat', (req: Request, res: Response) => {
 });
 
 // 4. Riders endpoints
-app.get('/api/riders', (req: Request, res: Response) => {
+app.get(['/api/riders', '/riders'], (req: Request, res: Response) => {
   res.json(RIDERS);
 });
 
-app.patch('/api/riders/:id', (req: Request, res: Response) => {
+app.patch(['/api/riders/:id', '/riders/:id'], (req: Request, res: Response) => {
   const rider = RIDERS.find(r => r.id === req.params.id);
   if (!rider) {
     res.status(404).json({ error: 'Rider not found' });
@@ -963,14 +971,14 @@ app.patch('/api/riders/:id', (req: Request, res: Response) => {
 });
 
 // 5. Platform Analytics Endpoint
-app.get('/api/admin/analytics', (req: Request, res: Response) => {
+app.get(['/api/admin/analytics', '/admin/analytics'], (req: Request, res: Response) => {
   res.json(compileAnalytics());
 });
 
 // ==========================================
 // 6. GEMINI AI ASSISTANT EMBEDDED AGENT
 // ==========================================
-app.post('/api/ai/chatbot', async (req: Request, res: Response) => {
+app.post(['/api/ai/chatbot', '/ai/chatbot'], async (req: Request, res: Response) => {
   const { message, chatHistory } = req.body;
 
   // Retrieve details of restaurants and products so Gemini actually knows what's online!
@@ -1040,7 +1048,7 @@ However, I can simulate an intelligent recommendation for you:
 });
 
 // AI Predictor of meal delivery and suggestions in Home
-app.post('/api/ai/recommendations', async (req: Request, res: Response) => {
+app.post(['/api/ai/recommendations', '/ai/recommendations'], async (req: Request, res: Response) => {
   const { preference } = req.body; // e.g. "vegan", "gluten-free", "indulgent", "fastest"
   
   const ai = getAIInstance();
