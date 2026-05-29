@@ -577,11 +577,8 @@ export default function App() {
         <header id="app-header" className="h-20 bg-white border-b border-zinc-200 px-6 flex items-center justify-between flex-none">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center">
-                <div className="w-5 h-5 bg-white rounded-sm rotate-45"></div>
-              </div>
-              <span className="text-2xl font-black tracking-tighter text-orange-600">FoodRush</span>
-            </div>
+              <img src="/logo.png" alt="FoodRush" className="w-10 h-10 rounded-xl object-cover" />
+<span className="text-2xl font-black tracking-tighter text-orange-600">FoodRush</span>
             
             {/* Real Address locator display matching Sleek style */}
             <div className="hidden md:flex items-center bg-zinc-100 rounded-full px-4 py-1.5 gap-2 border border-zinc-200">
