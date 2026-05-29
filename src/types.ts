@@ -93,6 +93,7 @@ export interface Order {
   updatedAt: string;
   deliveryNote?: string;
   prepTimeRemaining?: number; // in mins
+  rating?: number; // 1-5
 }
 
 export interface ChatMessage {

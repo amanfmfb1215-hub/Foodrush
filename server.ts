@@ -888,6 +888,16 @@ app.patch('/api/orders/:id', (req: Request, res: Response) => {
   res.json(order);
 });
 
+app.patch('/api/orders/:id/rating', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { rating } = req.body;
+  const order = ORDERS.find(o => o.id === id);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  order.rating = rating;
+  order.updatedAt = new Date().toISOString();
+  res.json(order);
+});
+
 // Add Review to Restaurant
 app.post('/api/restaurants/:id/reviews', (req: Request, res: Response) => {
   const rest = INITIAL_RESTAURANTS.find(r => r.id === req.params.id);
@@ -1075,7 +1085,7 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -1083,9 +1093,11 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`FoodRush server online at http://0.0.0.0:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`FoodRush server online at http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
 if (!process.env.VERCEL) {

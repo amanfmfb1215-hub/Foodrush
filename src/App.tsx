@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { MenuItem, Restaurant, Order, OrderStatus, ChatMessage, Rider, PlatformAnalytics, Review, OrderItem } from './types';
 import AppFooter from './components/AppFooter';
+import OrderTimer from './components/OrderTimer';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const API_KEY =
@@ -391,6 +392,25 @@ export default function App() {
     }
   };
 
+  const submitOrderRating = async (orderId: string, rating: number) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/rating`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating })
+      });
+      if (res.ok) {
+        const updatedOrder: Order = await res.json();
+        setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
+      } else {
+        alert('Failed to submit rating.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error submitting rating.');
+    }
+  };
+
   // Restaurant Partner: adding dish item
   const handleAddDish = async () => {
     if (!newFoodName || !newFoodPrice) {
@@ -577,16 +597,23 @@ export default function App() {
         <header id="app-header" className="h-20 bg-white border-b border-zinc-200 px-6 flex items-center justify-between flex-none">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="FoodRush" className="w-10 h-10 rounded-xl object-cover" />
-<span className="text-2xl font-black tracking-tighter text-orange-600">FoodRush</span>
+              <img 
+                src="https://kommodo.ai/i/NrZ2JNGDqX4cD2NIEhZX" 
+                alt="Logo" 
+                className="w-10 h-10 rounded-xl object-cover shadow-md" 
+                referrerPolicy="no-referrer" 
+              />
+              <span className="text-2xl font-black tracking-tighter text-orange-600">FoodRush</span>
+            </div>
             
             {/* Real Address locator display matching Sleek style */}
             <div className="hidden md:flex items-center bg-zinc-100 rounded-full px-4 py-1.5 gap-2 border border-zinc-200">
               <MapPin className="w-4 h-4 text-orange-600" />
               <span className="text-xs font-semibold text-zinc-800">Seattle HQ • 4th Avenue</span>
               <span className="text-[10px] text-zinc-400 bg-white px-2 py-0.5 rounded-full border border-zinc-200">Suite 404</span>
-           </div>
+            </div>
           </div>
+
           <div className="flex-1 max-w-sm mx-8 hidden sm:block">
             <div className="relative">
               <input
@@ -627,7 +654,8 @@ export default function App() {
               U
             </div>
           </div>
-        </div>
+        </header>
+
         {/* ==========================================
             ROLE VIEW PORTALS (Customer, Restaurant, Rider, Admin)
             ========================================== */}
@@ -872,6 +900,16 @@ export default function App() {
                                     <p className="text-xs text-zinc-600 mt-1">
                                       {order.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
                                     </p>
+                                    {order.status === 'delivered' && (
+                                      <div className="flex items-center gap-1 mt-2">
+                                        <span className="text-[10px] text-zinc-400 mr-1">Rate:</span>
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                          <button key={star} onClick={() => submitOrderRating(order.id, star)} className="text-amber-400 hover:scale-110 transition">
+                                            {order.rating && star <= order.rating ? '★' : '☆'}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
                                     <div className="mt-3 flex items-center gap-2">
                                       <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Stage:</span>
                                       {(() => {
@@ -880,7 +918,12 @@ export default function App() {
                                           case 'accepted':
                                             return <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200">Processing</span>;
                                           case 'preparing':
-                                            return <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200">Preparing</span>;
+                                            return (
+                                              <div className="flex items-center gap-2">
+                                                <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200">Preparing</span>
+                                                {order.prepTimeRemaining !== undefined && <OrderTimer initialMinutes={order.prepTimeRemaining} />}
+                                              </div>
+                                            );
                                           case 'ready':
                                             return <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-emerald-200">Prepared</span>;
                                           case 'dispatched':
@@ -2125,121 +2168,152 @@ export default function App() {
                 </div>
               )}
 
-             </tbody>
-</table>
-</div>
-)}
+              {/* 3. Transaction Ledger log */}
+              {selectedAdminTab === 'live-orders' && (
+                <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-zinc-50 border-b border-zinc-150 font-extrabold text-[#111]">
+                        <th className="p-4">ID</th>
+                        <th className="p-4">Outlets Spot</th>
+                        <th className="p-4">Customer info</th>
+                        <th className="p-4">Amount (USD)</th>
+                        <th className="p-4">State Timeline</th>
+                        <th className="p-4 text-right">Courier Driver</th>
+                        <th className="p-4 text-right">Rating</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => (
+                        <tr key={order.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
+                          <td className="p-4 font-mono text-zinc-500 uppercase">#{order.id}</td>
+                          <td className="p-4 font-bold text-slate-950">{order.restaurantName}</td>
+                          <td className="p-4">
+                            <div className="font-bold text-zinc-800">{order.customerName}</div>
+                            <div className="text-[10px] text-zinc-400">{order.customerAddress}</div>
+                          </td>
+                          <td className="p-4 font-mono font-bold text-orange-600">${order.total.toFixed(2)}</td>
+                          <td className="p-4">
+                            <span className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide">{order.status}</span>
+                          </td>
+                          <td className="p-4 text-right text-zinc-600 font-bold">{order.riderName || 'Awaiting Assign'}</td>
+                          <td className="p-4 text-right text-zinc-600 font-bold">{order.rating ? `${order.rating}★` : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-/* Admin Page Premium Footer */
-<div className="pt-12 mt-auto">
-  <AppFooter
-    currentRole={currentRole}
-    onChangeRole={setCurrentRole}
-    onSelectRestaurant={(id) => {
-      setActiveRestaurantId(id);
-      setActiveOrderId(null);
-      setCurrentRole('customer');
-    }}
-    onNavigateHome={() => {
-      setActiveRestaurantId(null);
-      setActiveOrderId(null);
-      setCurrentRole('customer');
-    }}
-    onNavigateTracking={() => {
-      const activeOr = orders.find(
-        o => o.status !== 'delivered' && o.status !== 'cancelled'
-      );
+              {/* Admin Page Premium Footer */}
+              <div className="pt-12 mt-auto">
+                <AppFooter
+                  currentRole={currentRole}
+                  onChangeRole={setCurrentRole}
+                  onSelectRestaurant={(id) => {
+                    setActiveRestaurantId(id);
+                    setActiveOrderId(null);
+                    setCurrentRole('customer');
+                  }}
+                  onNavigateHome={() => {
+                    setActiveRestaurantId(null);
+                    setActiveOrderId(null);
+                    setCurrentRole('customer');
+                  }}
+                  onNavigateTracking={() => {
+                    const activeOr = orders.find(o => o.status !== 'delivered' && o.status !== 'cancelled');
+                    if (activeOr) {
+                      setActiveOrderId(activeOr.id);
+                      setActiveRestaurantId(null);
+                    } else if (orders.length > 0) {
+                      setActiveOrderId(orders[orders.length - 1].id);
+                      setActiveRestaurantId(null);
+                    }
+                    setCurrentRole('customer');
+                  }}
+                  onOpenAssistant={() => {
+                    setCurrentRole('customer');
+                    setChatbotOpen(true);
+                  }}
+                  hasActiveOrder={orders.some(o => o.status !== 'delivered' && o.status !== 'cancelled')}
+                  hasItemsInCart={cart.length > 0}
+                />
+              </div>
 
-      if (activeOr) {
-        setActiveOrderId(activeOr.id);
-        setActiveRestaurantId(null);
-      } else if (orders.length > 0) {
-        setActiveOrderId(orders[orders.length - 1].id);
-        setActiveRestaurantId(null);
-      }
+            </div>
+          )}
 
-      setCurrentRole('customer');
-    }}
-    onOpenAssistant={() => {
-      setCurrentRole('customer');
-      setChatbotOpen(true);
-    }}
-    hasActiveOrder={orders.some(
-      o => o.status !== 'delivered' && o.status !== 'cancelled'
-    )}
-    hasItemsInCart={cart.length > 0}
-  />
-</div>
+        </div>
 
-{/* CHAT DRAWER */}
-{chatbotOpen && (
-  <div
-    id="ai-chat-drawer"
-    className="fixed bottom-6 right-6 z-50 w-96 h-[480px] bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col"
-  >
-      <button
-        onClick={() => setChatbotOpen(false)}
-        className="text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors"
-      >
-        <X className="w-4 h-4" />
-      </button>
-    </div>
-
-    {/* Messages list */}
-    <div className="flex-1 p-4 overflow-y-auto bg-zinc-50 flex flex-col gap-3">
-      <div className="bg-white p-3 rounded-2xl border border-zinc-200 text-xs text-zinc-800 leading-relaxed font-semibold">
-        <p>👋 Hello Aman! I am your <strong>FoodRush Smart Assistant</strong>.</p>
-        <p className="mt-1">
-          I have direct access to our live restaurants catalog. Ask me to
-          recommend dishes or design a custom combination order!
-        </p>
       </div>
 
-      {aiChatHistory.map((hist, idx) => (
-        <div
-          key={idx}
-          className={`p-3 rounded-2xl text-xs max-w-[85%] font-medium leading-relaxed ${
-            hist.sender === "customer"
-              ? "bg-orange-600 text-white self-end rounded-tr-none"
-              : "bg-white text-zinc-900 border border-zinc-150 self-start rounded-tl-none shadow-sm"
-          }`}
-        >
-          <p>{hist.message}</p>
-        </div>
-      ))}
+      {/* ==========================================
+          INTELLIGENT AI RECOMMENDATION CHAT DRAWER (POPUP)
+          ========================================== */}
+      {chatbotOpen && (
+        <div id="ai-chat-drawer" className="fixed bottom-6 right-6 z-50 w-96 bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col h-[480px]">
+          
+          {/* AI Banner head */}
+          <div className="bg-gradient-to-r from-orange-500 to-rose-500 p-4 text-white flex justify-between items-center flex-none">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-white animate-pulse" />
+              <div>
+                <h4 className="font-extrabold text-sm">FoodRush Assistant</h4>
+                <p className="text-[10px] text-orange-100">Smart meal suggestions & orders</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setChatbotOpen(false)}
+              className="text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
 
-      {aiLoading && (
-        <div className="bg-white p-3 rounded-2xl border border-zinc-150 text-xs text-zinc-400 self-start animate-pulse flex items-center gap-1.5 font-bold">
-          <Sparkles className="w-3.5 h-3.5 animate-spin" />
-          Thinking of culinary ideas...
+          {/* Messages list */}
+          <div className="flex-1 p-4 overflow-y-auto bg-zinc-50 flex flex-col gap-3">
+            <div className="bg-white p-3 rounded-2xl border border-zinc-200 text-xs text-zinc-800 leading-relaxed font-semibold">
+              <p>👋 Hello Aman! I am your <strong>FoodRush Smart Assistant</strong>.</p>
+              <p className="mt-1">I have direct access to our live restaurants catalog. Ask me to recommend dishes or design a custom combination order!</p>
+            </div>
+
+            {aiChatHistory.map((hist, idx) => (
+              <div
+                key={idx}
+                className={`p-3 rounded-2xl text-xs max-w-[85%] font-medium leading-relaxed ${hist.sender === 'customer' ? 'bg-orange-600 text-white self-end rounded-tr-none' : 'bg-white text-zinc-900 border border-zinc-150 self-start rounded-tl-none shadow-sm'}`}
+              >
+                <p>{hist.message}</p>
+              </div>
+            ))}
+
+            {aiLoading && (
+              <div className="bg-white p-3 rounded-2xl border border-zinc-150 text-xs text-zinc-400 self-start animate-pulse flex items-center gap-1.5 font-bold">
+                <Sparkles className="w-3.5 h-3.5 animate-spin" /> Thinking of culinary ideas...
+              </div>
+            )}
+          </div>
+
+          {/* Message input bar */}
+          <div className="p-3 border-t border-zinc-200 bg-white flex gap-2 flex-none">
+            <input
+              type="text"
+              placeholder="Ask for low calorie acai, burgers..."
+              value={aiMessageInput}
+              onChange={(e) => setAiMessageInput(e.target.value)}
+              className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-1.5 text-xs focus:ring-1 focus:ring-orange-500 text-slate-900 focus:outline-none"
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAskAI(); }}
+            />
+            <button
+              onClick={handleAskAI}
+              className="bg-orange-600 hover:bg-orange-700 text-white p-2.5 rounded-xl text-xs font-black shadow-sm transition-colors"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+
         </div>
       )}
+
     </div>
-
-    {/* Message input bar */}
-    <div className="p-3 border-t border-zinc-200 bg-white flex gap-2 flex-none">
-      <input
-        type="text"
-        placeholder="Ask for low calorie acai, burgers..."
-        value={aiMessageInput}
-        onChange={(e) => setAiMessageInput(e.target.value)}
-        className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-1.5 text-xs focus:ring-1 focus:ring-orange-500 text-slate-900 focus:outline-none"
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleAskAI();
-        }}
-      />
-
-      <button
-        onClick={handleAskAI}
-        className="bg-orange-600 hover:bg-orange-700 text-white p-2.5 rounded-xl text-xs font-black shadow-sm transition-colors"
-      >
-        <Send className="w-4 h-4" />
-      </button>
-    </div>
-  </div>
-)}
-
-</div>
-</div>
-</div>
-```
+  );
+}

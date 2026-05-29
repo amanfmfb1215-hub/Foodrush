@@ -46,9 +46,7 @@ export default function AppFooter({
         {/* Brand Column */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white text-base font-black font-mono shadow-md">
-              FR
-            </span>
+            <img src="https://kommodo.ai/i/NrZ2JNGDqX4cD2NIEhZX" alt="Logo" className="w-8 h-8 rounded-xl object-cover shadow-md" referrerPolicy="no-referrer" />
             <div>
               <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-1.5">
                 FoodRush <span className="text-[10px] bg-orange-500/20 text-orange-400 font-extrabold px-1.5 py-0.5 rounded tracking-wide uppercase">PREMIUM</span>
