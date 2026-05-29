@@ -2196,9 +2196,9 @@ export default function App() {
                 />
            </div>
           </div>
-          )}
+       )}
+        </div>
       </header>
-
       {/* ==========================================
           INTELLIGENT AI RECOMMENDATION CHAT DRAWER (POPUP)
           ========================================== */}
@@ -2264,7 +2264,6 @@ export default function App() {
           </div>
 
         </div>
-   )}
-    </div>
+)}
   );
 }
