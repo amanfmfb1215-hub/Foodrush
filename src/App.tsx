@@ -628,8 +628,7 @@ export default function App() {
               U
             </div>
           </div>
-        </header>
-
+        </div>
         {/* ==========================================
             ROLE VIEW PORTALS (Customer, Restaurant, Rider, Admin)
             ========================================== */}
