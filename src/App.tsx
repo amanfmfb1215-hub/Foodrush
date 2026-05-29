@@ -620,36 +620,36 @@ export default function App() {
     <div id="foodrush-app-container" className="min-h-screen bg-zinc-50 flex flex-col font-sans text-slate-900 selection:bg-orange-100 selection:text-orange-900">
       
       {/* GLOBAL BANNER SIMULATORS SWITCHER: Elegant interactive tool belt */}
-      <div id="role-switcher" className="sticky top-0 z-50 bg-zinc-900 border-b border-zinc-800 text-white py-2.5 px-4 flex flex-wrap gap-2 items-center justify-between">
+      <div id="role-switcher" className="sticky top-0 z-50 bg-zinc-900 border-b border-zinc-800 text-white py-2 px-3 sm:px-4 flex flex-col md:flex-row gap-2 items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 bg-orange-500 rounded flex items-center justify-center text-[10px] font-bold">R</div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-orange-400">Environment Sandbox Workspace</span>
+          <div className="w-5 h-5 bg-orange-500 rounded flex items-center justify-center text-[10px] font-bold shrink-0">R</div>
+          <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-orange-400">Environment Sandbox Workspace</span>
         </div>
         
-        <div className="flex items-center gap-1 bg-zinc-800 rounded-lg p-1 border border-zinc-700">
+        <div className="flex items-center gap-1 bg-zinc-800 rounded-lg p-1 border border-zinc-700 overflow-x-auto max-w-full scrollbar-none no-scrollbar snap-x">
           <button
             onClick={() => { setCurrentRole('customer'); }}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${currentRole === 'customer' ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 flex-shrink-0 snap-start ${currentRole === 'customer' ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}`}
           >
-            <Compass className="w-3.5 h-3.5" /> Customer View
+            <Compass className="w-3.5 h-3.5 shrink-0" /> <span className="text-xs">Customer View</span>
           </button>
           <button
             onClick={() => { setCurrentRole('restaurant'); }}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${currentRole === 'restaurant' ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 flex-shrink-0 snap-start ${currentRole === 'restaurant' ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}`}
           >
-            <ChefHat className="w-3.5 h-3.5" /> Restaurant Panel
+            <ChefHat className="w-3.5 h-3.5 shrink-0" /> <span className="text-xs">Restaurant Panel</span>
           </button>
           <button
             onClick={() => { setCurrentRole('rider'); }}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${currentRole === 'rider' ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 flex-shrink-0 snap-start ${currentRole === 'rider' ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}`}
           >
-            <Bike className="w-3.5 h-3.5" /> Delivery Rider App
+            <Bike className="w-3.5 h-3.5 shrink-0" /> <span className="text-xs">Delivery Rider App</span>
           </button>
           <button
             onClick={() => { setCurrentRole('admin'); }}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${currentRole === 'admin' ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 flex-shrink-0 snap-start ${currentRole === 'admin' ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}`}
           >
-            <Building className="w-3.5 h-3.5" /> Admin Dashboard
+            <Building className="w-3.5 h-3.5 shrink-0" /> <span className="text-xs">Admin Dashboard</span>
           </button>
         </div>
 
@@ -659,11 +659,11 @@ export default function App() {
       </div>
 
       {/* SLEEK MAIN PREMIUM FRAMEWORK */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         
         {/* PREMIUM SHARED HEADER ELEMENT */}
-        <header id="app-header" className="h-20 bg-white border-b border-zinc-200 px-6 flex items-center justify-between flex-none">
-          <div className="flex items-center gap-8">
+        <header id="app-header" className="h-20 bg-white border-b border-zinc-200 px-4 sm:px-6 flex items-center justify-between flex-none gap-2">
+          <div className="flex items-center gap-4 md:gap-8">
             <div className="flex items-center gap-2">
               <div id="brand-logo" className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 via-red-500 to-rose-600 flex items-center justify-center shadow-md shadow-orange-500/15 flex-shrink-0 border border-orange-400/20">
                 <Flame className="w-5 h-5 text-white fill-amber-300" />
@@ -673,13 +673,13 @@ export default function App() {
             
             {/* Real Address locator display matching Sleek style */}
             <div className="hidden md:flex items-center bg-zinc-100 rounded-full px-4 py-1.5 gap-2 border border-zinc-200">
-              <MapPin className="w-4 h-4 text-orange-600" />
+              <MapPin className="w-4 h-4 text-orange-600 shrink-0" />
               <span className="text-xs font-semibold text-zinc-800">Seattle HQ • 4th Avenue</span>
               <span className="text-[10px] text-zinc-400 bg-white px-2 py-0.5 rounded-full border border-zinc-200">Suite 404</span>
             </div>
           </div>
 
-          <div className="flex-1 max-w-sm mx-8 hidden sm:block">
+          <div className="flex-1 max-w-sm mx-4 lg:mx-8 hidden sm:block">
             <div className="relative">
               <input
                 type="text"
@@ -688,24 +688,25 @@ export default function App() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-zinc-100 border-none rounded-2xl py-2 pl-10 pr-4 text-xs focus:ring-2 focus:ring-orange-500/20 text-slate-900"
               />
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3 w-4 h-4 top-2.5" />
+              <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-2.5" />
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <button
               id="ai-assistant-toggle"
               onClick={() => setChatbotOpen(true)}
-              className="flex items-center gap-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full px-3 py-1 text-xs font-bold hover:bg-orange-100 transition-colors"
+              className="flex items-center gap-1 bg-orange-50 text-orange-600 border border-orange-200 rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-bold hover:bg-orange-100 transition-colors"
             >
-              <Sparkles className="w-3.5 h-3.5 text-orange-600 animate-pulse" />
-              <span>Ask AI Chatbot</span>
+              <Sparkles className="w-3.5 h-3.5 text-orange-600 animate-pulse shrink-0" />
+              <span className="hidden min-[400px]:inline">Ask AI</span>
+              <span className="hidden md:inline"> Chatbot</span>
             </button>
 
             {/* Micro layout cart pointer trigger */}
             <button 
               onClick={() => { setCurrentRole('customer'); setIsCartOpen(!isCartOpen); }}
-              className="relative p-2 text-zinc-600 bg-zinc-100 rounded-full hover:bg-zinc-200/80 transition-all"
+              className="relative p-2 text-zinc-600 bg-zinc-100 rounded-full hover:bg-zinc-200/80 transition-all shrink-0"
             >
               <ShoppingBag className="w-5 h-5 text-zinc-700" />
               {cart.length > 0 && (
@@ -715,7 +716,7 @@ export default function App() {
               )}
             </button>
 
-            <div className="w-9 h-9 rounded-full bg-orange-100 border-2 border-orange-200 overflow-hidden flex items-center justify-center text-xs font-bold text-orange-700">
+            <div className="w-9 h-9 rounded-full bg-orange-100 border-2 border-orange-200 overflow-hidden flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
               U
             </div>
           </div>
@@ -784,19 +785,80 @@ export default function App() {
               </aside>
 
               {/* Central Panel Area */}
-              <main className="flex-1 p-6 overflow-y-auto flex flex-col gap-6">
+              <main className="flex-1 p-4 sm:p-6 overflow-y-auto flex flex-col gap-4 sm:gap-6 min-w-0">
                 
+                {/* Responsive Top Navigation and Shortcuts for Mobile (lg:hidden) */}
+                <div className="lg:hidden flex flex-col gap-3 flex-none">
+                  <div className="flex bg-zinc-100 p-1 rounded-2xl border border-zinc-200 w-full">
+                    <button
+                      onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(false); }}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${!activeRestaurantId && !activeOrderId && !showOrderHistory ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                    >
+                      <Compass className="w-4 h-4" />
+                      <span>Discover</span>
+                    </button>
+                    <button
+                      onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(true); }}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${showOrderHistory && !activeRestaurantId && !activeOrderId ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                    >
+                      <Clock className="w-4 h-4" />
+                      <span>History ({orders.length})</span>
+                    </button>
+                  </div>
+                  
+                  {/* Micro Carousel for active orders on mobile, so they can trace their active delivery immediately */}
+                  {orders.some(o => o.status !== 'delivered' && o.status !== 'cancelled') && (
+                    <div className="flex flex-col gap-1.5 bg-orange-50/50 border border-orange-100 p-3 rounded-2xl">
+                      <span className="text-[10px] font-black text-orange-700 tracking-wider uppercase flex items-center gap-1">✨ Active Tracking Line ({orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled').length})</span>
+                      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none no-scrollbar snap-x">
+                        {orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled').map((order) => (
+                          <button
+                            key={order.id}
+                            onClick={() => { setActiveOrderId(order.id); setActiveRestaurantId(null); setShowOrderHistory(false); }}
+                            className="flex-shrink-0 bg-white hover:bg-orange-50 text-left p-2.5 rounded-xl border border-orange-200/60 shadow-xs flex items-center gap-3 snap-start"
+                          >
+                            <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center text-white text-xs font-black shrink-0">
+                              {order.status === 'placed' || order.status === 'accepted' ? '⏳' : '🏍️'}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-mono font-bold text-zinc-500">#{order.id}</span>
+                                <span className="text-[8px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.2 rounded uppercase shrink-0">{order.status}</span>
+                              </div>
+                              <p className="text-xs font-bold text-zinc-800 truncate max-w-[120px]">{order.restaurantName}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Responsive mobile search bar (replaces the header search hidden on < 640px) */}
+                  <div className="block sm:hidden">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search cuisines, cafes, biryani..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-white border border-zinc-200 rounded-2xl py-3 pl-11 pr-4 text-xs focus:ring-2 focus:ring-orange-500/20 text-slate-900 shadow-xs focus:outline-none"
+                      />
+                      <Search className="w-4 h-4 text-zinc-400 absolute left-4 top-3.5" />
+                    </div>
+                  </div>
+                </div>
+
                 {/* 1. Discover List View */}
                 {!activeRestaurantId && !activeOrderId && !showOrderHistory && (
                   <>
                     {/* Sleek Gradient Banner */}
-                    <section id="promo-banner" className="h-44 bg-gradient-to-r from-orange-500 to-rose-500 rounded-3xl p-6.5 flex justify-between items-center text-white relative overflow-hidden flex-none shadow-sm">
+                    <section id="promo-banner" className="min-h-[14rem] sm:min-h-0 sm:h-44 bg-gradient-to-r from-orange-500 to-rose-500 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center text-white relative overflow-hidden flex-none shadow-sm gap-4">
                       <div className="z-10 max-w-md relative">
-                        <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold mb-3.5 backdrop-blur-md uppercase tracking-wider">AI Recommendation & Smart Delivery</span>
-                        <h2 className="text-3xl font-black mb-1.5 leading-tight tracking-tight">FoodRush Lightning Speeds</h2>
+                        <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold mb-3backdrop-blur-md uppercase tracking-wider">AI Recommendation & Smart Delivery</span>
+                        <h2 className="text-2xl sm:text-3xl font-black mb-1.5 leading-tight tracking-tight">FoodRush Lightning Speeds</h2>
                         <p className="text-xs text-orange-100 mb-3 font-medium">Enjoy secure contactless handshakes, full GPS navigation, and customized chef recommendations.</p>
                         
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 text-[10px]">
                           <button
                             onClick={() => handleFetchQuickPredict('healthy')}
                             className="bg-white/10 hover:bg-white/20 transition px-3 py-1 text-[11px] rounded-lg font-bold border border-white/20"
@@ -805,17 +867,17 @@ export default function App() {
                           </button>
                           <button
                             onClick={() => handleFetchQuickPredict('indulgent')}
-                            className="bg-white/10 hover:bg-white/20 transition px-3 py-1 text-[11px] rounded-lg font-bold border border-white/20"
+                            className="bg-white/10 hover:bg-white/20 transition px-3 py-1 text-[11px] text-left rounded-lg font-bold border border-white/20"
                           >
                             🍔 Truffle Cheeseburger Matcher
                           </button>
                         </div>
                       </div>
                       <div className="absolute right-[-10px] top-[-10px] w-52 h-52 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-                      <div className="z-10 bg-white/15 backdrop-blur-xl p-4 rounded-2xl border border-white/20 text-white hidden md:block">
+                      <div className="z-10 bg-white/15 backdrop-blur-xl p-4 rounded-2xl border border-white/20 text-white hidden md:block shrink-0">
                         <p className="text-[10px] opacity-90 uppercase tracking-widest font-black">Trending Spot</p>
                         <p className="font-extrabold text-sm">BurgerBite Co.</p>
-                        <div className="flex items-center gap-1 mt-1 text-yellow-300">
+                        <div className="flex items-center gap-1 mt-1 text-yellow-300 font-bold">
                           <Star className="w-3.5 h-3.5 fill-current text-yellow-300" />
                           <span className="text-xs font-bold text-white">4.8 Rating</span>
                         </div>
@@ -1052,24 +1114,24 @@ export default function App() {
                       if (!rest) return <p>Selected restaurant missing.</p>;
                       return (
                         <>
-                          {/* JUMBO HERO BANNER */}
-                          <div className="rounded-3xl overflow-hidden border border-zinc-200 relative h-56 shadow-sm">
-                            <img src={rest.bannerImage} className="w-full h-full object-cover filter brightness-75" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent flex flex-col justify-end p-6 text-white">
-                              <div className="flex items-center gap-2">
-                                <h1 className="text-2xl font-black">{rest.name}</h1>
-                                {rest.isVerified && (
-                                  <span className="bg-orange-600 text-white rounded-full p-1 text-[10px] font-bold" title="Verified Chef Spot">✓ Verified</span>
-                                )}
-                              </div>
-                              <p className="text-xs text-zinc-300 italic mt-0.5">{rest.cuisine.join(', ')}</p>
-                              <div className="flex gap-4 items-center text-xs text-zinc-200 mt-2">
-                                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-orange-400" /> {rest.hours}</span>
-                                <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-zinc-300" /> {rest.address}</span>
-                                <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-zinc-300" /> {rest.phoneNumber}</span>
-                              </div>
-                            </div>
-                          </div>
+                           {/* JUMBO HERO BANNER */}
+                           <div className="rounded-3xl overflow-hidden border border-zinc-200 relative h-48 sm:h-56 shadow-sm flex-none">
+                             <img src={rest.bannerImage} className="w-full h-full object-cover filter brightness-[0.65]" />
+                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent flex flex-col justify-end p-4 sm:p-6 text-white gap-1">
+                               <div className="flex items-center gap-2 flex-wrap">
+                                 <h1 className="text-xl sm:text-2xl font-black leading-tight">{rest.name}</h1>
+                                 {rest.isVerified && (
+                                   <span className="bg-orange-600 text-white rounded-full px-2 py-0.5 text-[9px] font-bold inline-block" title="Verified Chef Spot">✓ Verified</span>
+                                 )}
+                               </div>
+                               <p className="text-[11px] sm:text-xs text-zinc-300 italic">{rest.cuisine.join(', ')}</p>
+                               <div className="flex flex-wrap gap-x-3 gap-y-1.5 items-center text-[11px] sm:text-xs text-zinc-200 mt-1">
+                                 <span className="flex items-center gap-1 shrink-0"><Clock className="w-3.5 h-3.5 text-orange-400" /> {rest.hours}</span>
+                                 <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-zinc-400" /> {rest.address}</span>
+                                 <span className="flex items-center gap-1 shrink-0"><Phone className="w-3.5 h-3.5 text-zinc-400" /> {rest.phoneNumber}</span>
+                               </div>
+                             </div>
+                           </div>
 
                           {/* Menu Catalog Section */}
                           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1449,7 +1511,7 @@ export default function App() {
                   <div className="fixed inset-0 bg-black/50 z-40 xl:hidden backdrop-blur-sm transition-opacity" onClick={() => setIsCartOpen(false)} />
                 )}
                 {/* Shopping Cart Drawer */}
-                <aside className={`w-80 border-l border-zinc-200 bg-white p-5 flex flex-col gap-5 flex-none fixed inset-y-0 right-0 z-50 xl:relative xl:z-0 xl:translate-x-0 transition-transform duration-300 ${isCartOpen ? 'translate-x-0 shadow-2xl xl:shadow-none' : 'translate-x-full xl:translate-x-0'}`}>
+                <aside className={`w-full sm:w-80 max-w-full sm:max-w-xs border-l border-zinc-200 bg-white p-5 flex flex-col gap-5 flex-none fixed inset-y-0 right-0 z-50 xl:relative xl:z-0 xl:translate-x-0 transition-transform duration-300 ${isCartOpen ? 'translate-x-0 shadow-2xl xl:shadow-none' : 'translate-x-full xl:translate-x-0'}`}>
                   <div className="flex justify-between items-center border-b border-zinc-100 pb-3">
                     <div className="flex items-center gap-2">
                       <ShoppingBag className="w-5 h-5 text-orange-600" />
@@ -2187,86 +2249,90 @@ export default function App() {
               {/* 2. KYC Approval table */}
               {selectedAdminTab === 'restaurants' && (
                 <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-zinc-50 border-b border-zinc-150 font-extrabold text-[#111]">
-                        <th className="p-4">Restaurant</th>
-                        <th className="p-4">Operating Hours</th>
-                        <th className="p-4">Contact Phone</th>
-                        <th className="p-4">Status Approvals</th>
-                        <th className="p-4 text-right">KYC Toggle Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {restaurants.map((rest) => (
-                        <tr key={rest.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
-                          <td className="p-4">
-                            <div className="flex items-center gap-2.5">
-                              <img src={rest.image} className="w-9 h-9 object-cover rounded-lg bg-zinc-100" />
-                              <div>
-                                <h4 className="font-extrabold text-slate-950">{rest.name}</h4>
-                                <span className="text-[10px] text-zinc-400">{rest.address}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-4 font-mono font-medium">{rest.hours}</td>
-                          <td className="p-4 text-zinc-600">{rest.phoneNumber}</td>
-                          <td className="p-4">
-                            {rest.isVerified ? (
-                              <span className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">VERIFIED PARTNER</span>
-                            ) : (
-                              <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">PENDING AUDIT</span>
-                            )}
-                          </td>
-                          <td className="p-4 text-right">
-                            <button
-                              onClick={() => handleVerifyRestaurantToggle(rest.id, rest.isVerified)}
-                              className={`text-[10px] font-black px-3 py-1 rounded-lg border transition ${rest.isVerified ? 'border-red-200 hover:bg-red-50 text-red-600' : 'border-green-200 hover:bg-green-50 text-green-700'}`}
-                            >
-                              {rest.isVerified ? 'Revoke Merchant' : 'Verify merchant'}
-                            </button>
-                          </td>
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full text-left border-collapse text-xs min-w-[700px]">
+                      <thead>
+                        <tr className="bg-zinc-50 border-b border-zinc-150 font-extrabold text-[#111]">
+                          <th className="p-4">Restaurant</th>
+                          <th className="p-4">Operating Hours</th>
+                          <th className="p-4">Contact Phone</th>
+                          <th className="p-4">Status Approvals</th>
+                          <th className="p-4 text-right">KYC Toggle Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {restaurants.map((rest) => (
+                          <tr key={rest.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
+                            <td className="p-4">
+                              <div className="flex items-center gap-2.5">
+                                <img src={rest.image} className="w-9 h-9 object-cover rounded-lg bg-zinc-100" />
+                                <div>
+                                  <h4 className="font-extrabold text-slate-950">{rest.name}</h4>
+                                  <span className="text-[10px] text-zinc-400">{rest.address}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4 font-mono font-medium">{rest.hours}</td>
+                            <td className="p-4 text-zinc-600">{rest.phoneNumber}</td>
+                            <td className="p-4">
+                              {rest.isVerified ? (
+                                <span className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">VERIFIED PARTNER</span>
+                              ) : (
+                                <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">PENDING AUDIT</span>
+                              )}
+                            </td>
+                            <td className="p-4 text-right">
+                              <button
+                                onClick={() => handleVerifyRestaurantToggle(rest.id, rest.isVerified)}
+                                className={`text-[10px] font-black px-3 py-1 rounded-lg border transition ${rest.isVerified ? 'border-red-200 hover:bg-red-50 text-red-600' : 'border-green-200 hover:bg-green-50 text-green-700'}`}
+                              >
+                                {rest.isVerified ? 'Revoke Merchant' : 'Verify merchant'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
               {/* 3. Transaction Ledger log */}
               {selectedAdminTab === 'live-orders' && (
                 <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-zinc-50 border-b border-zinc-150 font-extrabold text-[#111]">
-                        <th className="p-4">ID</th>
-                        <th className="p-4">Outlets Spot</th>
-                        <th className="p-4">Customer info</th>
-                        <th className="p-4">Amount (USD)</th>
-                        <th className="p-4">State Timeline</th>
-                        <th className="p-4 text-right">Courier Driver</th>
-                        <th className="p-4 text-right">Rating</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((order) => (
-                        <tr key={order.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
-                          <td className="p-4 font-mono text-zinc-500 uppercase">#{order.id}</td>
-                          <td className="p-4 font-bold text-slate-950">{order.restaurantName}</td>
-                          <td className="p-4">
-                            <div className="font-bold text-zinc-800">{order.customerName}</div>
-                            <div className="text-[10px] text-zinc-400">{order.customerAddress}</div>
-                          </td>
-                          <td className="p-4 font-mono font-bold text-orange-600">${order.total.toFixed(2)}</td>
-                          <td className="p-4">
-                            <span className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide">{order.status}</span>
-                          </td>
-                          <td className="p-4 text-right text-zinc-600 font-bold">{order.riderName || 'Awaiting Assign'}</td>
-                          <td className="p-4 text-right text-zinc-600 font-bold">{order.rating ? `${order.rating}★` : '-'}</td>
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full text-left border-collapse text-xs min-w-[800px]">
+                      <thead>
+                        <tr className="bg-zinc-50 border-b border-zinc-150 font-extrabold text-[#111]">
+                          <th className="p-4">ID</th>
+                          <th className="p-4">Outlets Spot</th>
+                          <th className="p-4">Customer info</th>
+                          <th className="p-4">Amount (USD)</th>
+                          <th className="p-4">State Timeline</th>
+                          <th className="p-4 text-right">Courier Driver</th>
+                          <th className="p-4 text-right">Rating</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {orders.map((order) => (
+                          <tr key={order.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
+                            <td className="p-4 font-mono text-zinc-500 uppercase">#{order.id}</td>
+                            <td className="p-4 font-bold text-slate-950">{order.restaurantName}</td>
+                            <td className="p-4">
+                              <div className="font-bold text-zinc-800">{order.customerName}</div>
+                              <div className="text-[10px] text-zinc-400">{order.customerAddress}</div>
+                            </td>
+                            <td className="p-4 font-mono font-bold text-orange-600">${order.total.toFixed(2)}</td>
+                            <td className="p-4">
+                              <span className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide">{order.status}</span>
+                            </td>
+                            <td className="p-4 text-right text-zinc-600 font-bold">{order.riderName || 'Awaiting Assign'}</td>
+                            <td className="p-4 text-right text-zinc-600 font-bold">{order.rating ? `${order.rating}★` : '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
@@ -2316,7 +2382,7 @@ export default function App() {
           INTELLIGENT AI RECOMMENDATION CHAT DRAWER (POPUP)
           ========================================== */}
       {chatbotOpen && (
-        <div id="ai-chat-drawer" className="fixed bottom-6 right-6 z-50 w-96 bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col h-[480px]">
+        <div id="ai-chat-drawer" className="fixed bottom-0 right-0 sm:bottom-6 sm:right-6 z-50 w-full sm:w-96 bg-white rounded-t-3xl sm:rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col h-[485px] max-h-[85vh] sm:max-h-[500px]">
           
           {/* AI Banner head */}
           <div className="bg-gradient-to-r from-orange-500 to-rose-500 p-4 text-white flex justify-between items-center flex-none">
