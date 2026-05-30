@@ -1,3 +1,4 @@
+import OTPLogin from './components/OTPLogin';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   APIProvider,
