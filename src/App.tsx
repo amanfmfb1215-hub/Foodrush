@@ -133,6 +133,9 @@ export default function App() {
   const [newFoodDesc, setNewFoodDesc] = useState<string>('');
   const [newFoodCat, setNewFoodCat] = useState<string>('Burgers');
   const [newFoodImage, setNewFoodImage] = useState<string>('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const [currentUser, setCurrentUser] = useState<any>(null);
+const [userRole, setUserRole] = useState<'customer' | 'restaurant' | 'rider' | 'admin'>('customer');
 const [isLoggedIn, setIsLoggedIn] = useState(false);
 const [currentUser, setCurrentUser] = useState<any>(null);
   // Auto poll data loop to capture status updates or live rider positions
@@ -614,6 +617,18 @@ const [currentUser, setCurrentUser] = useState<any>(null);
   // Filtering restaurant cards list
  if (!isLoggedIn) {
   return <OTPLogin onSuccess={(user) => { setCurrentUser(user); setIsLoggedIn(true); }} />;
+}
+ if (!isLoggedIn) {
+  return (
+    <LoginPage
+      onSuccess={(user, role) => {
+        setCurrentUser(user);
+        setUserRole(role);
+        setCurrentRole(role);
+        setIsLoggedIn(true);
+      }}
+    />
+  );
 }
   const filteredRestaurants = restaurants.filter(r => {
     const matchCategory = !selectedCategory || r.cuisine.some(c => c.toLowerCase() === selectedCategory.toLowerCase());
