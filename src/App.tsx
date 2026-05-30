@@ -139,6 +139,7 @@ const [userRole, setUserRole] = useState<'customer' | 'restaurant' | 'rider' | '
 const [isLoggedIn, setIsLoggedIn] = useState(false);
 const [currentUser, setCurrentUser] = useState<any>(null);
   // Auto poll data loop to capture status updates or live rider positions
+  useEffect(() => {
     localStorage.setItem('foodrush_address', checkoutAddress);
   }, [checkoutAddress]);
 
