@@ -126,7 +126,7 @@ export default function App() {
   // Admin Tab selector
   const [selectedAdminTab, setSelectedAdminTab] = useState<'restaurants' | 'live-orders' | 'analytics'>('analytics');
 
-  // Restaurant Partner selected workspace
+ // Restaurant Partner selected workspace
   const [partnerRestId, setPartnerRestId] = useState<string>('rest-1');
   const [newFoodName, setNewFoodName] = useState<string>('');
   const [newFoodPrice, setNewFoodPrice] = useState<string>('');
@@ -139,7 +139,6 @@ const [userRole, setUserRole] = useState<'customer' | 'restaurant' | 'rider' | '
 const [isLoggedIn, setIsLoggedIn] = useState(false);
 const [currentUser, setCurrentUser] = useState<any>(null);
   // Auto poll data loop to capture status updates or live rider positions
-  useEffect(() => {
     localStorage.setItem('foodrush_address', checkoutAddress);
   }, [checkoutAddress]);
 
