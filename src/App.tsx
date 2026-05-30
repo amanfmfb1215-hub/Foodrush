@@ -133,7 +133,8 @@ export default function App() {
   const [newFoodDesc, setNewFoodDesc] = useState<string>('');
   const [newFoodCat, setNewFoodCat] = useState<string>('Burgers');
   const [newFoodImage, setNewFoodImage] = useState<string>('');
-
+const [isLoggedIn, setIsLoggedIn] = useState(false);
+const [currentUser, setCurrentUser] = useState<any>(null);
   // Auto poll data loop to capture status updates or live rider positions
   useEffect(() => {
     localStorage.setItem('foodrush_address', checkoutAddress);
@@ -611,6 +612,9 @@ export default function App() {
   };
 
   // Filtering restaurant cards list
+ if (!isLoggedIn) {
+  return <OTPLogin onSuccess={(user) => { setCurrentUser(user); setIsLoggedIn(true); }} />;
+}
   const filteredRestaurants = restaurants.filter(r => {
     const matchCategory = !selectedCategory || r.cuisine.some(c => c.toLowerCase() === selectedCategory.toLowerCase());
     const matchSearch = !searchQuery || r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.cuisine.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
