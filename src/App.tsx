@@ -618,7 +618,7 @@ const [currentUser, setCurrentUser] = useState<any>(null);
  if (!isLoggedIn) {
   return <OTPLogin onSuccess={(user) => { setCurrentUser(user); setIsLoggedIn(true); }} />;
 }
- if (!isLoggedIn) {
+if (!isLoggedIn) {
   return (
     <LoginPage
       onSuccess={(user, role) => {
