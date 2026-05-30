@@ -132,12 +132,9 @@ export default function App() {
   const [newFoodPrice, setNewFoodPrice] = useState<string>('');
   const [newFoodDesc, setNewFoodDesc] = useState<string>('');
   const [newFoodCat, setNewFoodCat] = useState<string>('Burgers');
-  const [newFoodImage, setNewFoodImage] = useState<string>('');
+ const [newFoodImage, setNewFoodImage] = useState<string>('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-const [currentUser, setCurrentUser] = useState<any>(null);
-const [userRole, setUserRole] = useState<'customer' | 'restaurant' | 'rider' | 'admin'>('customer');
-const [isLoggedIn, setIsLoggedIn] = useState(false);
-const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userRole, setUserRole] = useState<'customer' | 'restaurant' | 'rider' | 'admin'>('customer');
   // Auto poll data loop to capture status updates or live rider positions
   useEffect(() => {
     localStorage.setItem('foodrush_address', checkoutAddress);
