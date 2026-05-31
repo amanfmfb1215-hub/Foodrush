@@ -114,7 +114,12 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="FoodRush" className="w-16 h-16 rounded-2xl object-cover mx-auto mb-3 shadow-md" />
+          <img 
+  src="/logo.png" 
+  alt="FoodRush" 
+  className="w-16 h-16 rounded-2xl object-cover mx-auto mb-3 shadow-md"
+  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+/>
           <h1 className="text-2xl font-black text-orange-600 tracking-tight">FoodRush</h1>
           <p className="text-xs text-zinc-400 mt-1">Pakistan's Gourmet Hub 🇵🇰</p>
         </div>
