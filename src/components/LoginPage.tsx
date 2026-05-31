@@ -66,24 +66,31 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
     }
   };
 
-  const handleVerifyOTP = async () => {
-    setError('');
-    if (!otp || otp.length !== 6) {
-      setError('Please enter the 6-digit OTP');
-      return;
+const handleVerifyOTP = async () => {
+  setError('');
+  if (!otp || otp.length !== 6) {
+    setError('Please enter the 6-digit OTP');
+    return;
+  }
+  setLoading(true);
+  try {
+    if (!confirmation) throw new Error('No confirmation found');
+    const result = await confirmation.confirm(otp.trim());  // .trim() add kiya
+    onSuccess(result.user, selectedRole!);
+  } catch (err: any) {
+    console.error('Verify Error:', err);
+    // Error code check karo
+    if (err.code === 'auth/invalid-verification-code') {
+      setError('Wrong OTP. For testing use: 123456');
+    } else if (err.code === 'auth/code-expired') {
+      setError('OTP expired. Please resend.');
+    } else {
+      setError(err.message || 'Invalid OTP. Please try again.');
     }
-    setLoading(true);
-    try {
-      if (!confirmation) throw new Error('No confirmation found');
-      const result = await confirmation.confirm(otp);
-      onSuccess(result.user, selectedRole!);
-    } catch (err: any) {
-      console.error('Verify Error:', err);
-      setError('Invalid OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-rose-50 flex items-center justify-center p-4">
