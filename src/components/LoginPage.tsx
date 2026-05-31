@@ -48,9 +48,9 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
       setupRecaptcha();
       const appVerifier = (window as any).recaptchaVerifier;
       // Format to match Firebase test number exactly: +92 3XX XXXXXXX
-      const digits = phone.replace(/\D/g, '');
-     const phoneNumber = `+923001234567`.replace('3001234567', digits);
-      console.log('Sending OTP to:', phoneNumber);
+    const digits = phone.replace(/\D/g, '');
+const phoneNumber = `+92${digits}`;
+console.log('Sending OTP to:', phoneNumber);
       const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
       setConfirmation(result);
       setStep('otp');
