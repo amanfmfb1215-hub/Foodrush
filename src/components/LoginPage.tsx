@@ -44,34 +44,28 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
   const handleSendOTP = async () => {
     setError('');
     if (!phone || phone.length < 10) {
-      setError('Please enter a valid 10-digit phone number');
+      setError('Please enter a valid phone number');
       return;
     }
     setLoading(true);
     try {
-      setupRecaptcha();
+      if ((window as any).recaptchaVerifier) {
+        try { (window as any).recaptchaVerifier.clear(); } catch (e) {}
+        (window as any).recaptchaVerifier = null;
+      }
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(
+        auth, 'recaptcha-container', { size: 'invisible' }
+      );
       const appVerifier = (window as any).recaptchaVerifier;
-
-      // Format exactly like Firebase saves it: +92 3XX XXXXXXX
       const digits = phone.replace(/\D/g, '');
-      const first3 = digits.slice(0, 3);   // 300
-      const rest = digits.slice(3, 10);    // 1234567
-      const phoneNumber = `+92 ${first3} ${rest}`;
-
-      console.log('Sending OTP to:', phoneNumber);
-
+      const phoneNumber = `+92${digits}`;
+      console.log('Sending to:', phoneNumber);
       const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
       setConfirmation(result);
       setStep('otp');
     } catch (err: any) {
       console.error('OTP Error:', err.code, err.message);
-      if (err.code === 'auth/invalid-phone-number') {
-        setError('Invalid phone number format.');
-      } else if (err.code === 'auth/too-many-requests') {
-        setError('Too many attempts. Please try again later.');
-      } else {
-        setError(err.message || 'Failed to send OTP. Please try again.');
-      }
+      setError(err.message || 'Failed to send OTP.');
       if ((window as any).recaptchaVerifier) {
         try { (window as any).recaptchaVerifier.clear(); } catch (e) {}
         (window as any).recaptchaVerifier = null;
@@ -80,7 +74,6 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
       setLoading(false);
     }
   };
-
   const handleVerifyOTP = async () => {
     setError('');
     if (!otp || otp.length !== 6) {
