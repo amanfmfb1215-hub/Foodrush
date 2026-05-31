@@ -120,6 +120,9 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
   className="w-16 h-16 rounded-2xl object-cover mx-auto mb-3 shadow-md"
   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
 />
+          <div className="w-16 h-16 rounded-2xl bg-orange-600 flex items-center justify-center mx-auto mb-3 shadow-md text-white text-2xl font-black">
+  FR
+</div>
           <h1 className="text-2xl font-black text-orange-600 tracking-tight">FoodRush</h1>
           <p className="text-xs text-zinc-400 mt-1">Pakistan's Gourmet Hub 🇵🇰</p>
         </div>
