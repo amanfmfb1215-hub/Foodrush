@@ -41,7 +41,8 @@ export default function OTPLogin({ onSuccess }: OTPLoginProps) {
     try {
       setupRecaptcha();
       const appVerifier = (window as any).recaptchaVerifier;
-      const phoneNumber = phone.startsWith('+') ? phone : `+92${phone}`;
+      const digits = phone.replace(/\D/g, '');
+const phoneNumber = `+92 ${digits.slice(0, 3)} ${digits.slice(3, 10)}`;
       const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
       setConfirmation(result);
       setStep('otp');
