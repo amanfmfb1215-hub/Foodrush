@@ -30,11 +30,15 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
   ];
 
   const setupRecaptcha = () => {
-    if (!(window as any).recaptchaVerifier) {
-      (window as any).recaptchaVerifier = new RecaptchaVerifier(
-        auth, 'recaptcha-container', { size: 'invisible' }
-      );
+    if ((window as any).recaptchaVerifier) {
+      try {
+        (window as any).recaptchaVerifier.clear();
+      } catch (e) {}
+      (window as any).recaptchaVerifier = null;
     }
+    (window as any).recaptchaVerifier = new RecaptchaVerifier(
+      auth, 'recaptcha-container', { size: 'invisible' }
+    );
   };
 
   const handleSendOTP = async () => {
@@ -47,18 +51,29 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
     try {
       setupRecaptcha();
       const appVerifier = (window as any).recaptchaVerifier;
-      // Format to match Firebase test number exactly: +92 3XX XXXXXXX
-    const digits = phone.replace(/\D/g, '');
-const phoneNumber = `+92${digits}`;
-console.log('Sending OTP to:', phoneNumber);
+
+      // Format exactly like Firebase saves it: +92 3XX XXXXXXX
+      const digits = phone.replace(/\D/g, '');
+      const first3 = digits.slice(0, 3);   // 300
+      const rest = digits.slice(3, 10);    // 1234567
+      const phoneNumber = `+92 ${first3} ${rest}`;
+
+      console.log('Sending OTP to:', phoneNumber);
+
       const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
       setConfirmation(result);
       setStep('otp');
     } catch (err: any) {
-      console.error('OTP Error:', err);
-      setError(err.message || 'Failed to send OTP. Please try again.');
+      console.error('OTP Error:', err.code, err.message);
+      if (err.code === 'auth/invalid-phone-number') {
+        setError('Invalid phone number format.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many attempts. Please try again later.');
+      } else {
+        setError(err.message || 'Failed to send OTP. Please try again.');
+      }
       if ((window as any).recaptchaVerifier) {
-        (window as any).recaptchaVerifier.clear();
+        try { (window as any).recaptchaVerifier.clear(); } catch (e) {}
         (window as any).recaptchaVerifier = null;
       }
     } finally {
@@ -66,31 +81,30 @@ console.log('Sending OTP to:', phoneNumber);
     }
   };
 
-const handleVerifyOTP = async () => {
-  setError('');
-  if (!otp || otp.length !== 6) {
-    setError('Please enter the 6-digit OTP');
-    return;
-  }
-  setLoading(true);
-  try {
-    if (!confirmation) throw new Error('No confirmation found');
-    const result = await confirmation.confirm(otp.trim());  // .trim() add kiya
-    onSuccess(result.user, selectedRole!);
-  } catch (err: any) {
-    console.error('Verify Error:', err);
-    // Error code check karo
-    if (err.code === 'auth/invalid-verification-code') {
-      setError('Wrong OTP. For testing use: 123456');
-    } else if (err.code === 'auth/code-expired') {
-      setError('OTP expired. Please resend.');
-    } else {
-      setError(err.message || 'Invalid OTP. Please try again.');
+  const handleVerifyOTP = async () => {
+    setError('');
+    if (!otp || otp.length !== 6) {
+      setError('Please enter the 6-digit OTP');
+      return;
     }
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      if (!confirmation) throw new Error('No confirmation found');
+      const result = await confirmation.confirm(otp.trim());
+      onSuccess(result.user, selectedRole!);
+    } catch (err: any) {
+      console.error('Verify Error:', err.code, err.message);
+      if (err.code === 'auth/invalid-verification-code') {
+        setError('Wrong OTP. For testing use: 123456');
+      } else if (err.code === 'auth/code-expired') {
+        setError('OTP expired. Please go back and resend.');
+      } else {
+        setError('Invalid OTP. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-rose-50 flex items-center justify-center p-4">
@@ -155,10 +169,23 @@ const handleVerifyOTP = async () => {
             <div className="flex flex-col gap-4">
               <div className="flex gap-2">
                 <div className="bg-zinc-100 border border-zinc-200 rounded-xl px-3 flex items-center text-sm font-bold text-zinc-600 whitespace-nowrap">🇵🇰 +92</div>
-                <input type="tel" placeholder="3001234567" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20" autoFocus />
+                <input
+                  type="tel"
+                  placeholder="3001234567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  autoFocus
+                />
               </div>
+              {/* Show formatted number preview */}
+              {phone.length >= 10 && (
+                <p className="text-[11px] text-zinc-400 text-center">
+                  Sending to: <strong className="text-zinc-600">+92 {phone.slice(0,3)} {phone.slice(3,10)}</strong>
+                </p>
+              )}
               {error && <div className="bg-red-50 border border-red-100 text-red-600 text-xs p-3 rounded-xl font-medium">⚠️ {error}</div>}
-              <button onClick={handleSendOTP} disabled={loading} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
+              <button onClick={handleSendOTP} disabled={loading || phone.length < 10} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
                 {loading ? <Loader className="w-4 h-4 animate-spin" /> : <><Phone className="w-4 h-4" /> Send OTP</>}
               </button>
               <button onClick={() => { setStep('role'); setError(''); }} className="text-xs text-zinc-400 hover:text-zinc-600 font-bold text-center">← Change role</button>
@@ -174,7 +201,7 @@ const handleVerifyOTP = async () => {
                 <Shield className="w-6 h-6 text-green-600" />
               </div>
               <h2 className="text-lg font-black text-slate-900">Verify OTP</h2>
-              <p className="text-xs text-zinc-400 mt-1">Code sent to <strong className="text-slate-700">+92 {phone.slice(0,3)} {phone.slice(3)}</strong></p>
+              <p className="text-xs text-zinc-400 mt-1">Code sent to <strong className="text-slate-700">+92 {phone.slice(0,3)} {phone.slice(3,10)}</strong></p>
             </div>
             <div className="flex flex-col gap-4">
               <input
@@ -189,7 +216,7 @@ const handleVerifyOTP = async () => {
               <button onClick={handleVerifyOTP} disabled={loading || otp.length !== 6} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 transition-colors disabled:opacity-60">
                 {loading ? <Loader className="w-4 h-4 animate-spin" /> : <><Shield className="w-4 h-4" /> Verify & Login</>}
               </button>
-              <button onClick={() => { setStep('phone'); setOtp(''); setError(''); }} className="text-xs text-orange-600 hover:text-orange-700 font-bold text-center">← Resend OTP</button>
+              <button onClick={() => { setStep('phone'); setOtp(''); setError(''); setConfirmation(null); }} className="text-xs text-orange-600 hover:text-orange-700 font-bold text-center">← Change phone number</button>
             </div>
           </>
         )}
