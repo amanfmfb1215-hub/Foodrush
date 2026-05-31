@@ -75,7 +75,7 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
     try {
       setupRecaptcha();
       const appVerifier = (window as any).recaptchaVerifier;
-      const phoneNumber = `+92${phone}`;
+      const phoneNumber = `+92 ${phone.slice(0,3)} ${phone.slice(3)}`;
       const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
       setConfirmation(result);
       setStep('otp');
