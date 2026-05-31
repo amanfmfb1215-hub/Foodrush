@@ -20,16 +20,19 @@ export default function OTPLogin({ onSuccess }: OTPLoginProps) {
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
   const recaptchaRef = useRef<HTMLDivElement>(null);
 
-  const setupRecaptcha = () => {
-    if (!(window as any).recaptchaVerifier) {
-      (window as any).recaptchaVerifier = new RecaptchaVerifier(
-        auth,
-        'recaptcha-container',
-        { size: 'invisible' }
-      );
-    }
-  };
-
+const setupRecaptcha = () => {
+  if ((window as any).recaptchaVerifier) {
+    try {
+      (window as any).recaptchaVerifier.clear();
+    } catch (e) {}
+    (window as any).recaptchaVerifier = null;
+  }
+  (window as any).recaptchaVerifier = new RecaptchaVerifier(
+    auth,
+    'recaptcha-container',
+    { size: 'invisible' }
+  );
+};
   const handleSendOTP = async () => {
     setError('');
     if (!phone || phone.length < 10) {
