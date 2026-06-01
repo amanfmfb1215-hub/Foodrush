@@ -32,6 +32,7 @@ import {
   Percent,
   ClipboardList,
   ShieldCheck,
+  Share2,
   Activity,
   ArrowRight,
   ThumbsUp,
@@ -107,6 +108,15 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [activeRestaurantId, setActiveRestaurantId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [copiedState, setCopiedState] = useState<boolean>(false);
+  const [sharedOrderParam, setSharedOrderParam] = useState<string | null>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('share') || params.get('sharedOrderId');
+    } catch {
+      return null;
+    }
+  });
   const [trackingViewMode, setTrackingViewMode] = useState<'map' | 'summary'>('map');
   const [deliveryRatingValue, setDeliveryRatingValue] = useState<number>(5);
   const [deliveryFeedbackComment, setDeliveryFeedbackComment] = useState<string>('');
@@ -191,6 +201,46 @@ export default function App() {
       setDeliveryFeedbackComment('');
     }
   }, [activeOrderId]);
+
+  // Set shared order automatically on load if param is present
+  useEffect(() => {
+    if (sharedOrderParam) {
+      setActiveOrderId(sharedOrderParam);
+      setCurrentRole('customer');
+    }
+  }, [sharedOrderParam]);
+
+  const handleClearSharedView = () => {
+    setActiveOrderId(null);
+    setSharedOrderParam(null);
+    try {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const handleShareTracking = (orderId: string) => {
+    const origin = window.location.origin;
+    const shareUrl = `${origin}/?sharedOrderId=${orderId}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: 'FoodRush Live Order Status',
+        text: `Hey, trace my FoodRush delivery status in real-time!`,
+        url: shareUrl,
+      }).catch(err => {
+        console.log('Error sharing:', err);
+        navigator.clipboard.writeText(shareUrl);
+        setCopiedState(true);
+        setTimeout(() => setCopiedState(false), 3000);
+      });
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      setCopiedState(true);
+      setTimeout(() => setCopiedState(false), 3000);
+    }
+  };
 
   const safeJson = async (res: Response) => {
     if (!res.ok) throw new Error(`Status ${res.status}`);
@@ -648,8 +698,8 @@ export default function App() {
     return matchCategory && matchSearch;
   });
 
-  // Render login screen if no live Google session is present
-  if (!userSession) {
+  // Render login screen if no live Google session is present and we're not viewing a shared order
+  if (!userSession && !sharedOrderParam) {
     return (
       <GoogleLoginScreen
         onLoginSuccess={(session) => {
@@ -1322,7 +1372,7 @@ export default function App() {
                   <div id="order-tracking-panel" className="flex flex-col gap-6">
                     <div className="flex items-center justify-between">
                       <button
-                        onClick={() => setActiveOrderId(null)}
+                        onClick={handleClearSharedView}
                         className="flex items-center gap-1.5 text-xs text-orange-600 hover:text-orange-700 font-bold self-start cursor-pointer"
                       >
                         ← Back to Discover list
@@ -1351,11 +1401,49 @@ export default function App() {
                           
                           {/* Live delivery status timeline */}
                           <div className="lg:col-span-2 flex flex-col gap-6 bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm">
+                            
+                            {sharedOrderParam && (
+                              <div className="bg-orange-50 border border-orange-200 px-4 py-3 rounded-2xl flex items-center justify-between gap-4 animate-fade-in">
+                                <div className="space-y-0.5">
+                                  <p className="text-xs font-black text-orange-950">👋 Guest Shared Tracking</p>
+                                  <p className="text-[10px] text-zinc-600">You are tracing a friend's live food or rider location. Set up your own Google profile to start ordering!</p>
+                                </div>
+                                <button
+                                  onClick={handleClearSharedView}
+                                  className="text-[10px] bg-orange-600 hover:bg-orange-700 text-white font-extrabold px-3 py-1.5 rounded-xl shrink-0 transition-all cursor-pointer shadow-sm"
+                                >
+                                  Register / Sign In
+                                </button>
+                              </div>
+                            )}
+
                             <div className="flex justify-between items-start border-b border-zinc-100 pb-3 flex-wrap gap-2">
                               <div className="flex-1 min-w-[200px]">
-                                <span className="text-[9px] bg-orange-100 text-orange-800 font-black px-2 py-0.5 rounded-full uppercase tracking-wider select-none">GPS Live Tracking Ready</span>
-                                <h2 className="text-xl font-black text-slate-900 mt-1">Tracing Delivery #{order.id}</h2>
-                                <p className="text-xs text-zinc-400">From <strong>{order.restaurantName}</strong></p>
+                                <span className="text-[9px] bg-orange-100 text-orange-850 font-black px-2 py-0.5 rounded-full uppercase tracking-wider select-none">GPS Live Tracking Ready</span>
+                                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                  <h2 className="text-xl font-black text-slate-900">Tracing Delivery #{order.id}</h2>
+                                  
+                                  {/* Beautiful and professional Share Button */}
+                                  <button
+                                    onClick={() => handleShareTracking(order.id)}
+                                    className={`flex items-center gap-1.5 border px-2.5 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer shadow-sm shrink-0 ${copiedState ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-50 hover:border-green-200' : 'bg-zinc-50 hover:bg-orange-50 text-zinc-700 hover:text-orange-700 border-zinc-200 hover:border-orange-250'}`}
+                                    title="Share live delivery tracking link with friends"
+                                    id="btn-share-tracking"
+                                  >
+                                    {copiedState ? (
+                                      <>
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Link Copied!</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Share2 className="w-3.5 h-3.5 animate-pulse" />
+                                        <span>Share Status</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                                <p className="text-xs text-zinc-400 mt-1">From <strong>{order.restaurantName}</strong></p>
                               </div>
                               <div className="flex flex-wrap items-center gap-4">
                                 <CustomerOrderETA order={order} />

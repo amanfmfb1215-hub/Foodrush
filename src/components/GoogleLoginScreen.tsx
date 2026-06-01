@@ -168,29 +168,29 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative overflow-hidden text-zinc-100 font-sans selection:bg-orange-650/30 selection:text-orange-200">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50/40 via-white to-orange-50/20 flex items-center justify-center p-4 relative overflow-hidden text-zinc-800 font-sans selection:bg-orange-150 selection:text-orange-950">
       
       {/* Decorative Blur Ambient Lights */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-600/15 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-rose-600/10 rounded-full blur-[140px] pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-400/10 rounded-full blur-[120px] pointer-events-none"></div>
 
-      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl p-6 sm:p-8 relative z-10 transition-all duration-300">
+      <div className="w-full max-w-md bg-white border border-zinc-150 rounded-3xl shadow-2xl shadow-orange-900/5 p-6 sm:p-8 relative z-10 transition-all duration-300">
         
         {/* Brand Header */}
         <div className="flex flex-col items-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 via-red-500 to-rose-600 flex items-center justify-center shadow-lg shadow-orange-500/20 mb-3 border border-orange-400/20">
-            <Flame className="w-8 h-8 text-white fill-amber-300 animate-pulse" />
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 via-amber-500 to-red-600 flex items-center justify-center shadow-lg shadow-orange-500/20 mb-3 border border-orange-400/20">
+            <Flame className="w-8 h-8 text-white fill-amber-305 animate-pulse" />
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-white">Food<span className="text-orange-500">Rush</span></h1>
-          <p className="text-xs text-zinc-400 mt-1 uppercase tracking-widest font-bold">Verified Google Gateway</p>
+          <h1 className="text-3xl font-black tracking-tight text-zinc-900">Food<span className="text-orange-600">Rush</span></h1>
+          <p className="text-[10px] text-orange-650 bg-orange-50 border border-orange-100 px-3 py-0.5 rounded-full mt-1.5 uppercase tracking-widest font-black">Verified Google Gateway</p>
         </div>
 
         {/* STEP 1: Main Real Google Identity Selector & Shortcuts */}
         {step === 'choose-account' && (
           <div className="space-y-5 animate-fade-in">
             <div className="text-center">
-              <h2 className="text-lg font-extrabold text-white">Sign In with Google</h2>
-              <p className="text-xs text-zinc-400 mt-1">Place orders, manage deliveries, and enter portal sessions instantly.</p>
+              <h2 className="text-lg font-black text-zinc-900">Sign In with Google</h2>
+              <p className="text-xs text-zinc-500 mt-1">Place orders, manage deliveries, and enter portal sessions instantly.</p>
             </div>
 
             {/* REAL DYNAMIC GOOGLE LOGIN ACTION BUTTON */}
@@ -198,12 +198,12 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
               <button
                 onClick={handleLiveGoogleLogin}
                 disabled={isAuthenticating}
-                className="w-full py-4 px-4 bg-white hover:bg-zinc-50 text-zinc-900 font-extrabold text-sm rounded-2xl flex items-center justify-center gap-3.5 transition duration-200 active:scale-[0.99] border border-zinc-100 shadow-md hover:shadow-lg hover:shadow-zinc-500/5 cursor-pointer disabled:opacity-85"
+                className="w-full py-4 px-4 bg-white hover:bg-orange-50/20 text-zinc-800 hover:text-orange-950 font-black text-sm rounded-2xl flex items-center justify-center gap-3.5 transition duration-200 active:scale-[0.99] border border-zinc-200 hover:border-orange-350 shadow-sm hover:shadow-md cursor-pointer disabled:opacity-85"
               >
                 {isAuthenticating ? (
                   <Loader2 className="w-5 h-5 text-orange-600 animate-spin" />
                 ) : (
-                  <div className="flex gap-0.5 font-black text-base select-none shrink-0 border border-zinc-200/50 bg-zinc-100/30 px-2 py-0.5 rounded-lg">
+                  <div className="flex gap-0.5 font-black text-base select-none shrink-0 border border-zinc-200 bg-zinc-50 px-2 py-0.5 rounded-lg">
                     <span className="text-blue-600">G</span>
                     <span className="text-red-500">o</span>
                     <span className="text-amber-500">o</span>
@@ -216,16 +216,16 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
               </button>
 
               {errorMsg && (
-                <div className="bg-red-950/55 border border-red-900/50 p-3 rounded-xl">
-                  <p className="text-red-400 text-[11px] font-bold text-center leading-relaxed">⚠️ {errorMsg}</p>
+                <div className="bg-red-50/80 border border-red-200 p-3 rounded-xl">
+                  <p className="text-red-700 text-[11px] font-bold text-center leading-relaxed">⚠️ {errorMsg}</p>
                 </div>
               )}
             </div>
 
             {/* Google Console Credentials Info Box */}
-            <div className="bg-zinc-950 text-[10px] text-zinc-450 rounded-2xl p-3 border border-zinc-900/80 leading-relaxed font-medium space-y-1.5">
-              <p className="font-bold text-orange-400 uppercase tracking-widest text-[9px]">⚙️ Firebase Authentication Status</p>
-              <p className="font-mono text-zinc-400 select-all break-all bg-zinc-900 p-2 rounded-lg border border-zinc-850">
+            <div className="bg-orange-50/60 text-[10px] text-zinc-600 rounded-2xl p-3.5 border border-orange-100/80 leading-relaxed font-semibold space-y-1.5">
+              <p className="font-bold text-orange-700 uppercase tracking-widest text-[9px]">⚙️ Firebase Authentication Status</p>
+              <p className="font-mono text-orange-950 bg-white p-2 rounded-lg border border-orange-100 break-all">
                 Authorized: Google Identity Sign-In
               </p>
               <p className="text-zinc-500">
@@ -235,9 +235,9 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
 
             {/* DIVIDER FOR DEVELOPMENT ROSTER */}
             <div className="relative flex py-2 items-center">
-              <div className="flex-grow border-t border-zinc-800"></div>
-              <span className="flex-shrink mx-4 text-zinc-500 text-[9px] font-black uppercase tracking-wider">Developer Roster / Sandbox Shortcuts</span>
-              <div className="flex-grow border-t border-zinc-800"></div>
+              <div className="flex-grow border-t border-zinc-150"></div>
+              <span className="flex-shrink mx-4 text-zinc-400 text-[9px] font-black uppercase tracking-wider">Developer Roster / Sandbox Shortcuts</span>
+              <div className="flex-grow border-t border-zinc-150"></div>
             </div>
 
             {/* List of custom simulation Google accounts */}
@@ -249,11 +249,11 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
                   <button
                     key={acc.email}
                     onClick={() => handleSelectPreseeded(acc)}
-                    className="p-3 bg-zinc-850/60 hover:bg-zinc-800 border border-zinc-850 rounded-2xl text-left flex items-start gap-2.5 transition group cursor-pointer"
+                    className="p-3 bg-zinc-50/80 hover:bg-orange-50/50 border border-zinc-150 hover:border-orange-200 rounded-2xl text-left flex items-start gap-2.5 transition group cursor-pointer"
                   >
-                    <img src={acc.avatar} alt="avatar" className="w-8 h-8 rounded-lg bg-zinc-900/80 border border-zinc-750 shrink-0" />
+                    <img src={acc.avatar} alt="avatar" className="w-8 h-8 rounded-lg bg-white border border-zinc-200 shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-white text-[11px] group-hover:text-orange-400 transition-colors truncate">{acc.name}</p>
+                      <p className="font-bold text-zinc-900 text-[11px] group-hover:text-orange-650 transition-colors truncate">{acc.name}</p>
                       <p className="text-zinc-500 font-mono text-[9px] truncate">{acc.email}</p>
                     </div>
                   </button>
@@ -263,9 +263,9 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
 
             <button
               onClick={() => { setErrorMsg(''); setStep('enter-custom-email'); }}
-              className="w-full py-3 px-4 bg-zinc-950 hover:bg-zinc-850 border border-zinc-850 rounded-2xl font-bold text-xs text-zinc-350 flex items-center justify-center gap-2 transition active:scale-[0.98] cursor-pointer"
+              className="w-full py-3 px-4 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-2xl font-bold text-xs text-zinc-600 flex items-center justify-center gap-2 transition active:scale-[0.98] cursor-pointer"
             >
-              <Mail className="w-3.5 h-3.5 text-zinc-400" />
+              <Mail className="w-3.5 h-3.5 text-zinc-500" />
               <span>Simulate Custom Gmail Address</span>
             </button>
           </div>
@@ -278,46 +278,46 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
               <button
                 type="button"
                 onClick={() => setStep('choose-account')}
-                className="text-[11px] text-zinc-400 hover:text-white mb-2 ml-px"
+                className="text-[11px] text-zinc-500 hover:text-zinc-900 mb-2 ml-px"
               >
                 &larr; Back to account choices
               </button>
-              <h2 className="text-lg font-bold text-white">Simulate Google Account</h2>
-              <p className="text-xs text-zinc-400 mt-1">Type in any custom email configuration to check custom access states.</p>
+              <h2 className="text-lg font-black text-zinc-900">Simulate Google Account</h2>
+              <p className="text-xs text-zinc-500 mt-1">Type in any custom email configuration to check custom access states.</p>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1.5 pl-px">Google GMail Address</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 pl-px">Google GMail Address</label>
                 <input
                   type="email"
                   required
                   placeholder="amanfmfb1215@gmail.com or other..."
                   value={customEmail}
                   onChange={(e) => setCustomEmail(e.target.value)}
-                  className="w-full bg-zinc-850 border border-zinc-800 hover:border-zinc-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3.5 py-3 text-xs text-white focus:outline-none transition font-semibold"
+                  className="w-full bg-zinc-50 border border-zinc-200 hover:border-zinc-300 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3.5 py-3 text-xs text-zinc-900 focus:outline-none transition font-semibold"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1.5 pl-px">Full Name (Optional)</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 pl-px">Full Name (Optional)</label>
                 <input
                   type="text"
                   placeholder="e.g. Aman Ahmed"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
-                  className="w-full bg-zinc-850 border border-zinc-800 hover:border-zinc-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3.5 py-3 text-xs text-white focus:outline-none transition font-semibold"
+                  className="w-full bg-zinc-50 border border-zinc-200 hover:border-zinc-300 focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3.5 py-3 text-xs text-zinc-900 focus:outline-none transition font-semibold"
                 />
               </div>
             </div>
 
             {errorMsg && (
-              <p className="text-red-500 text-xs mt-1 font-semibold">&bull; {errorMsg}</p>
+              <p className="text-red-650 text-xs font-semibold">&bull; {errorMsg}</p>
             )}
 
             <button
               type="submit"
-              className="w-full py-3 px-4 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition active:scale-[0.98] shadow-md shadow-orange-500/10 cursor-pointer mt-4"
+              className="w-full py-3 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition active:scale-[0.98] shadow-md shadow-orange-500/10 cursor-pointer mt-4"
             >
               <span>Verify Google Account</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -334,31 +334,31 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
                   setErrorMsg('');
                   setStep('choose-account');
                 }}
-                className="text-[11px] text-zinc-400 hover:text-white mb-2 ml-px flex items-center gap-1"
+                className="text-[11px] text-zinc-500 hover:text-zinc-900 mb-2 ml-px flex items-center gap-1"
               >
                 &larr; Switch Google Account
               </button>
               
               {/* Authenticated user banner badge */}
-              <div className="bg-zinc-850 p-3 rounded-2xl border border-zinc-800/80 flex items-center gap-3">
-                <img src={selectedAccount.avatar} alt="avatar" className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700 shrink-0" />
+              <div className="bg-zinc-50 p-3 rounded-2xl border border-zinc-150 flex items-center gap-3">
+                <img src={selectedAccount.avatar} alt="avatar" className="w-8 h-8 rounded-lg bg-white border border-zinc-200 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-white truncate">{selectedAccount.name}</p>
-                  <p className="text-[10px] text-zinc-400 font-mono truncate">{selectedAccount.email}</p>
+                  <p className="text-xs font-bold text-zinc-900 truncate">{selectedAccount.name}</p>
+                  <p className="text-[10px] text-zinc-500 font-mono truncate">{selectedAccount.email}</p>
                 </div>
-                <div className="bg-green-950 border border-green-850 text-green-450 text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 select-none">
+                <div className="bg-green-100 border border-green-200 text-green-850 text-[9px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0 select-none">
                   Verified
                 </div>
               </div>
 
               {sandboxNotice && (
-                <div className="mt-3 bg-orange-950/20 border border-orange-900/30 p-2.5 rounded-xl">
-                  <p className="text-orange-355 text-[10px] leading-relaxed font-medium">{sandboxNotice}</p>
+                <div className="mt-3 bg-orange-50 border border-orange-100 p-2.5 rounded-xl">
+                  <p className="text-orange-950 text-[10px] leading-relaxed font-semibold">{sandboxNotice}</p>
                 </div>
               )}
               
-              <h2 className="text-base font-bold text-white mt-4">Select Workspace Portal</h2>
-              <p className="text-xs text-zinc-400 mt-1">Please specify which panel you want to launch for this session.</p>
+              <h2 className="text-base font-black text-zinc-900 mt-4">Select Workspace Portal</h2>
+              <p className="text-xs text-zinc-500 mt-1">Please specify which panel you want to launch for this session.</p>
             </div>
 
             {/* List of 4 roles */}
@@ -369,18 +369,18 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
                 onClick={() => setSelectedRole('customer')}
                 className={`p-3 rounded-2xl text-left border flex items-center gap-3 transition cursor-pointer ${
                   selectedRole === 'customer'
-                    ? 'bg-orange-600/10 border-orange-500/70 shadow-sm shadow-orange-500/10'
-                    : 'bg-zinc-850/60 border-zinc-850 hover:border-zinc-800 hover:bg-zinc-850'
+                    ? 'bg-orange-50 border-orange-350 shadow-sm shadow-orange-500/5'
+                    : 'bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
                 }`}
               >
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition ${
-                  selectedRole === 'customer' ? 'bg-orange-600 text-white border-orange-500' : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                  selectedRole === 'customer' ? 'bg-orange-600 text-white border-orange-500' : 'bg-zinc-100 text-zinc-550 border-zinc-200'
                 }`}>
                   <Compass className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-extrabold text-white block animate-fade-in">Customer / Diner View</span>
-                  <span className="text-[10px] text-zinc-400 block truncate leading-tight">Explore cuisines, build orders, trace live riders & map</span>
+                  <span className="text-xs font-extrabold text-zinc-900 block animate-fade-in">Customer / Diner View</span>
+                  <span className="text-[10px] text-zinc-500 block truncate leading-tight mt-0.5">Explore cuisines, build orders, trace live riders & map</span>
                 </div>
               </button>
 
@@ -389,18 +389,18 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
                 onClick={() => setSelectedRole('restaurant')}
                 className={`p-3 rounded-2xl text-left border flex items-center gap-3 transition cursor-pointer ${
                   selectedRole === 'restaurant'
-                    ? 'bg-orange-600/10 border-orange-500/70 shadow-sm shadow-orange-500/10'
-                    : 'bg-zinc-850/60 border-zinc-850 hover:border-zinc-800 hover:bg-zinc-850'
+                    ? 'bg-orange-50 border-orange-350 shadow-sm shadow-orange-500/5'
+                    : 'bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
                 }`}
               >
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition ${
-                  selectedRole === 'restaurant' ? 'bg-orange-600 text-white border-orange-500' : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                  selectedRole === 'restaurant' ? 'bg-orange-600 text-white border-orange-500' : 'bg-zinc-100 text-zinc-550 border-zinc-200'
                 }`}>
                   <ChefHat className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-extrabold text-white block">Restaurant Merchant Panel</span>
-                  <span className="text-[10px] text-zinc-400 block truncate leading-tight">Manage active kitchen boards, custom menus & stats</span>
+                  <span className="text-xs font-extrabold text-zinc-900 block">Restaurant Merchant Panel</span>
+                  <span className="text-[10px] text-zinc-500 block truncate leading-tight mt-0.5">Manage active kitchen boards, custom menus & stats</span>
                 </div>
               </button>
 
@@ -409,18 +409,18 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
                 onClick={() => setSelectedRole('rider')}
                 className={`p-3 rounded-2xl text-left border flex items-center gap-3 transition cursor-pointer ${
                   selectedRole === 'rider'
-                    ? 'bg-orange-600/10 border-orange-500/70 shadow-sm shadow-orange-500/10'
-                    : 'bg-zinc-850/60 border-zinc-850 hover:border-zinc-800 hover:bg-zinc-850'
+                    ? 'bg-orange-50 border-orange-350 shadow-sm shadow-orange-500/5'
+                    : 'bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
                 }`}
               >
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition ${
-                  selectedRole === 'rider' ? 'bg-orange-600 text-white border-orange-500' : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                  selectedRole === 'rider' ? 'bg-orange-600 text-white border-orange-500' : 'bg-zinc-100 text-zinc-550 border-zinc-200'
                 }`}>
                   <Bike className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-extrabold text-white block">Delivery Rider App</span>
-                  <span className="text-[10px] text-zinc-400 block truncate leading-tight">Simulate route map progress, courier chat & dispatch</span>
+                  <span className="text-xs font-extrabold text-zinc-900 block">Delivery Rider App</span>
+                  <span className="text-[10px] text-zinc-500 block truncate leading-tight mt-0.5">Simulate route map progress, courier chat & dispatch</span>
                 </div>
               </button>
 
@@ -438,30 +438,30 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
                     className={`p-3 rounded-2xl text-left border flex items-center gap-3 transition ${
                       isAdminEmail 
                         ? selectedRole === 'admin'
-                          ? 'bg-orange-600/10 border-orange-500/70 shadow-sm shadow-orange-500/10 cursor-pointer'
-                          : 'bg-zinc-850/60 border-zinc-850 hover:border-zinc-800 hover:bg-zinc-850 cursor-pointer'
-                        : 'opacity-50 bg-zinc-900 border-zinc-850 cursor-not-allowed'
+                          ? 'bg-orange-50 border-orange-350 shadow-sm shadow-orange-500/5 cursor-pointer'
+                          : 'bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 cursor-pointer'
+                        : 'opacity-50 bg-zinc-50 border-zinc-150 cursor-not-allowed'
                     }`}
                   >
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition ${
                       isAdminEmail
                         ? selectedRole === 'admin'
                           ? 'bg-orange-600 text-white border-orange-500'
-                          : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-                        : 'bg-zinc-900 text-zinc-650 border-zinc-850'
+                          : 'bg-zinc-100 text-zinc-550 border-zinc-200'
+                        : 'bg-zinc-100 text-zinc-350 border-zinc-150'
                     }`}>
                       {isAdminEmail ? <Building className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-extrabold text-white block">Super Admin Dashboard</span>
+                        <span className="text-xs font-extrabold text-zinc-900 block">Super Admin Dashboard</span>
                         {!isAdminEmail && (
-                          <span className="bg-zinc-800 text-zinc-400 text-[8px] font-black px-1.5 py-0.2 rounded border border-zinc-700 uppercase shrink-0">
+                          <span className="bg-zinc-100 border border-zinc-205 text-zinc-450 text-[8px] font-black px-1.5 py-0.2 rounded uppercase shrink-0">
                             Locked
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-zinc-450 block truncate leading-tight">
+                      <span className="text-[10px] text-zinc-450 block truncate leading-tight mt-0.5">
                         {isAdminEmail 
                           ? 'Global systems cockpit, audit partners, monitor live order telemetry' 
                           : 'Restricted specifically to amanfmfb1215@gmail.com'}
@@ -474,12 +474,12 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
             </div>
 
             {errorMsg && (
-              <p className="text-red-500 text-xs font-semibold">&bull; {errorMsg}</p>
+              <p className="text-red-650 text-xs font-semibold">&bull; {errorMsg}</p>
             )}
 
             <button
               onClick={handleFinishLogin}
-              className="w-full py-3.5 px-4 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition active:scale-[0.98] shadow-md shadow-orange-500/15 cursor-pointer mt-2"
+              className="w-full py-3.5 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition active:scale-[0.98] shadow-md shadow-orange-500/15 cursor-pointer mt-2"
             >
               <span>Confirm & Enter FoodRush</span>
               <ArrowRight className="w-4 h-4" />
