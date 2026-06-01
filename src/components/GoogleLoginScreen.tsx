@@ -97,7 +97,9 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
       } else if (err.code === 'auth/cancelled-popup-request') {
         displayError = 'Simultaneous pop-ups cancelled the active session.';
       } else if (err.code === 'auth/operation-not-allowed') {
-        displayError = 'Google Auth provider is not enabled in your Firebase console settings.';
+        displayError = 'Google Auth provider is not enabled in your Firebase console. Please enable Google in Firebase > Authentication > Sign-in method.';
+      } else if (err.code === 'auth/unauthorized-domain') {
+        displayError = `This domain (${typeof window !== 'undefined' ? window.location.hostname : 'current domain'}) is not authorized in your Firebase Project. Please copy the hostname from the box below and add it to Firebase Console > Authentication > Settings > Authorized Domains!`;
       }
       setErrorMsg(displayError);
     } finally {
@@ -223,13 +225,31 @@ export default function GoogleLoginScreen({ onLoginSuccess }: GoogleLoginProps) 
             </div>
 
             {/* Google Console Credentials Info Box */}
-            <div className="bg-orange-50/60 text-[10px] text-zinc-600 rounded-2xl p-3.5 border border-orange-100/80 leading-relaxed font-semibold space-y-1.5">
-              <p className="font-bold text-orange-700 uppercase tracking-widest text-[9px]">⚙️ Firebase Authentication Status</p>
-              <p className="font-mono text-orange-950 bg-white p-2 rounded-lg border border-orange-100 break-all">
-                Authorized: Google Identity Sign-In
+            <div className="bg-orange-50/80 text-[11px] text-zinc-700 rounded-2xl p-4 border border-orange-150 leading-relaxed font-semibold space-y-2">
+              <p className="font-extrabold text-orange-700 uppercase tracking-widest text-[9px] flex items-center gap-1.5">
+                <span>🔑 Firebase Authorized Domain Setup</span>
               </p>
-              <p className="text-zinc-500">
-                Using secure Firebase pop-up authentication connected to your project's Firebase Auth Domain.
+              <p className="text-zinc-650 text-xs">
+                To fix the <strong className="text-orange-900">"auth/unauthorized-domain"</strong> and allow Google Popups, add this current domain to your Firebase Console under <strong className="text-zinc-900">Auth &rarr; Settings &rarr; Authorized Domains</strong>:
+              </p>
+              <div className="flex items-center gap-1.5 bg-white p-2 rounded-xl border border-orange-100 shadow-sm">
+                <code className="font-mono text-orange-850 text-[10px] break-all select-all flex-1 py-0.5">
+                  {typeof window !== 'undefined' ? window.location.hostname : 'loading...'}
+                </code>
+                <button
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      navigator.clipboard.writeText(window.location.hostname);
+                      alert('Copied domain to clipboard! Go to Firebase > Authentication > Settings > Authorized domains > Add domain, and paste this in.');
+                    }
+                  }}
+                  className="bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg shrink-0 cursor-pointer shadow-sm active:scale-95 transition-all"
+                >
+                  Copy Domain
+                </button>
+              </div>
+              <p className="text-[10px] text-zinc-500 italic">
+                💡 Tip: Make sure the Google Identity Provider is disabled/enabled & toggled ON in the Firebase Authentication "Sign-in method" tab!
               </p>
             </div>
 
