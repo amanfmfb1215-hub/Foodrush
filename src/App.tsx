@@ -1,4 +1,3 @@
-import OTPLogin from './components/OTPLogin';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   APIProvider,
@@ -25,6 +24,7 @@ import {
   MessageSquare,
   MapPin,
   User,
+  LogOut,
   CheckCircle,
   X,
   CreditCard,
@@ -43,6 +43,8 @@ import {
 import { MenuItem, Restaurant, Order, OrderStatus, ChatMessage, Rider, PlatformAnalytics, Review, OrderItem } from './types';
 import AppFooter from './components/AppFooter';
 import OrderTimer from './components/OrderTimer';
+import CustomerOrderETA from './components/CustomerOrderETA';
+import GoogleLoginScreen from './components/GoogleLoginScreen';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { STATIC_FALLBACK_RESTAURANTS, STATIC_FALLBACK_RIDERS, STATIC_FALLBACK_ANALYTICS } from './fallbackData';
 
@@ -69,8 +71,31 @@ const translateGridToLatLng = (gridLat: number, gridLng: number): { lat: number;
 };
 
 export default function App() {
-  // Roles toggle: Customer, Restaurant, Rider, Admin
-  const [currentRole, setCurrentRole] = useState<'customer' | 'restaurant' | 'rider' | 'admin'>('customer');
+  // Authenticated user session with Google Auth
+  const [userSession, setUserSession] = useState<{
+    email: string;
+    name: string;
+    avatar: string;
+    role: 'customer' | 'restaurant' | 'rider' | 'admin';
+  } | null>(() => {
+    try {
+      const cached = localStorage.getItem('foodrush_session2');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Roles toggle: Customer, Restaurant, Rider, Admin (respects local preferences)
+  const [currentRole, setCurrentRole] = useState<'customer' | 'restaurant' | 'rider' | 'admin'>(() => {
+    try {
+      const cached = localStorage.getItem('foodrush_session2');
+      if (cached) {
+        return JSON.parse(cached).role;
+      }
+    } catch {}
+    return 'customer';
+  });
 
   // Core synchronized states
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -82,6 +107,7 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [activeRestaurantId, setActiveRestaurantId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [trackingViewMode, setTrackingViewMode] = useState<'map' | 'summary'>('map');
   const [showOrderHistory, setShowOrderHistory] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -126,15 +152,14 @@ export default function App() {
   // Admin Tab selector
   const [selectedAdminTab, setSelectedAdminTab] = useState<'restaurants' | 'live-orders' | 'analytics'>('analytics');
 
- // Restaurant Partner selected workspace
+  // Restaurant Partner selected workspace
   const [partnerRestId, setPartnerRestId] = useState<string>('rest-1');
   const [newFoodName, setNewFoodName] = useState<string>('');
   const [newFoodPrice, setNewFoodPrice] = useState<string>('');
   const [newFoodDesc, setNewFoodDesc] = useState<string>('');
   const [newFoodCat, setNewFoodCat] = useState<string>('Burgers');
- const [newFoodImage, setNewFoodImage] = useState<string>('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<'customer' | 'restaurant' | 'rider' | 'admin'>('customer');
+  const [newFoodImage, setNewFoodImage] = useState<string>('');
+
   // Auto poll data loop to capture status updates or live rider positions
   useEffect(() => {
     localStorage.setItem('foodrush_address', checkoutAddress);
@@ -388,7 +413,7 @@ export default function App() {
         price: c.item.price,
         quantity: c.quantity
       })),
-      customerName: 'Aman Ahmed',
+      customerName: userSession?.name || 'Aman Ahmed',
       customerAddress: checkoutAddress,
       customerPhone: checkoutPhone,
       paymentMethod: paymentMethod === 'easypaisa' ? 'EasyPaisa' : paymentMethod === 'jazzcash' ? 'JazzCash' : paymentMethod === 'bank' ? `Bank Transfer (${selectedBank || 'Bank'})` : paymentMethod === 'cod' ? 'Cash on Delivery' : 'Stripe Instant Checkout',
@@ -612,26 +637,24 @@ export default function App() {
   };
 
   // Filtering restaurant cards list
- if (!isLoggedIn) {
-  return <OTPLogin onSuccess={(user) => { setCurrentUser(user); setIsLoggedIn(true); }} />;
-}
-if (!isLoggedIn) {
-  return (
-    <LoginPage
-      onSuccess={(user, role) => {
-        setCurrentUser(user);
-        setUserRole(role);
-        setCurrentRole(role);
-        setIsLoggedIn(true);
-      }}
-    />
-  );
-}
   const filteredRestaurants = restaurants.filter(r => {
     const matchCategory = !selectedCategory || r.cuisine.some(c => c.toLowerCase() === selectedCategory.toLowerCase());
     const matchSearch = !searchQuery || r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.cuisine.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchCategory && matchSearch;
   });
+
+  // Render login screen if no live Google session is present
+  if (!userSession) {
+    return (
+      <GoogleLoginScreen
+        onLoginSuccess={(session) => {
+          setUserSession(session);
+          setCurrentRole(session.role);
+          localStorage.setItem('foodrush_session2', JSON.stringify(session));
+        }}
+      />
+    );
+  }
 
   return (
     <div id="foodrush-app-container" className="min-h-screen bg-zinc-50 flex flex-col font-sans text-slate-900 selection:bg-orange-100 selection:text-orange-900">
@@ -662,12 +685,14 @@ if (!isLoggedIn) {
           >
             <Bike className="w-3.5 h-3.5 shrink-0" /> <span className="text-xs">Delivery Rider App</span>
           </button>
-          <button
-            onClick={() => { setCurrentRole('admin'); }}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 flex-shrink-0 snap-start ${currentRole === 'admin' ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}`}
-          >
-            <Building className="w-3.5 h-3.5 shrink-0" /> <span className="text-xs">Admin Dashboard</span>
-          </button>
+          {userSession?.email?.trim()?.toLowerCase() === 'amanfmfb1215@gmail.com' && (
+            <button
+              onClick={() => { setCurrentRole('admin'); }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 flex-shrink-0 snap-start ${currentRole === 'admin' ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}`}
+            >
+              <Building className="w-3.5 h-3.5 shrink-0" /> <span className="text-xs">Admin Dashboard</span>
+            </button>
+          )}
         </div>
 
         <div className="hidden lg:flex items-center gap-4 text-xs text-zinc-400">
@@ -733,9 +758,27 @@ if (!isLoggedIn) {
               )}
             </button>
 
-            <div className="w-9 h-9 rounded-full bg-orange-100 border-2 border-orange-200 overflow-hidden flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
-              U
-            </div>
+            {userSession && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pl-2 bg-zinc-50 border border-zinc-200 p-1.5 rounded-2xl transition">
+                  <img src={userSession.avatar} className="w-7 h-7 rounded-lg bg-zinc-200 p-0.5 border border-zinc-300" alt="Google Profile" />
+                  <div className="hidden lg:flex flex-col text-left text-[11px] leading-tight pr-1">
+                    <span className="font-extrabold text-slate-800 truncate max-w-[110px]">{userSession.name}</span>
+                    <span className="text-zinc-500 font-mono text-[9px] truncate max-w-[110px]">{userSession.email}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('foodrush_session2');
+                      setUserSession(null);
+                    }}
+                    title="Sign Out of Google"
+                    className="p-1 px-1.5 text-[10px] font-black text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-lg flex items-center gap-1 transition select-none cursor-pointer"
+                  >
+                    <LogOut className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 
@@ -1272,12 +1315,28 @@ if (!isLoggedIn) {
                 {/* 3. Real-Time Order Tracking View */}
                 {activeOrderId && (
                   <div id="order-tracking-panel" className="flex flex-col gap-6">
-                    <button
-                      onClick={() => setActiveOrderId(null)}
-                      className="flex items-center gap-1.5 text-xs text-orange-600 hover:text-orange-700 font-bold self-start cursor-pointer"
-                    >
-                      ← Back to Discover list
-                    </button>
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() => setActiveOrderId(null)}
+                        className="flex items-center gap-1.5 text-xs text-orange-600 hover:text-orange-700 font-bold self-start cursor-pointer"
+                      >
+                        ← Back to Discover list
+                      </button>
+                      <div className="flex bg-zinc-100 p-0.5 rounded-lg border border-zinc-200 shrink-0">
+                        <button
+                          onClick={() => setTrackingViewMode('map')}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${trackingViewMode === 'map' ? 'bg-white text-orange-600 shadow-sm border border-zinc-200' : 'text-zinc-500 hover:text-zinc-700'}`}
+                        >
+                          Live Tracking
+                        </button>
+                        <button
+                          onClick={() => setTrackingViewMode('summary')}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${trackingViewMode === 'summary' ? 'bg-white text-orange-600 shadow-sm border border-zinc-200' : 'text-zinc-500 hover:text-zinc-700'}`}
+                        >
+                          Status Summary
+                        </button>
+                      </div>
+                    </div>
 
                     {(() => {
                       const order = orders.find(o => o.id === activeOrderId);
@@ -1288,21 +1347,24 @@ if (!isLoggedIn) {
                           {/* Live delivery status timeline */}
                           <div className="lg:col-span-2 flex flex-col gap-6 bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm">
                             <div className="flex justify-between items-start border-b border-zinc-100 pb-3 flex-wrap gap-2">
-                              <div>
+                              <div className="flex-1 min-w-[200px]">
                                 <span className="text-[9px] bg-orange-100 text-orange-800 font-black px-2 py-0.5 rounded-full uppercase tracking-wider select-none">GPS Live Tracking Ready</span>
                                 <h2 className="text-xl font-black text-slate-900 mt-1">Tracing Delivery #{order.id}</h2>
                                 <p className="text-xs text-zinc-400">From <strong>{order.restaurantName}</strong></p>
                               </div>
-                              <div className="text-right">
-                                <p className="text-xs text-zinc-400">Total Charged</p>
-                                <p className="text-lg font-black text-orange-600">${order.total.toFixed(2)}</p>
-                                <p className="text-[10px] text-zinc-400 italic">via {order.paymentMethod}</p>
+                              <div className="flex flex-wrap items-center gap-4">
+                                <CustomerOrderETA order={order} />
+                                <div className="text-right">
+                                  <p className="text-xs text-zinc-400">Total Charged</p>
+                                  <p className="text-lg font-black text-orange-600">${order.total.toFixed(2)}</p>
+                                  <p className="text-[10px] text-zinc-400 italic">via {order.paymentMethod}</p>
+                                </div>
                               </div>
                             </div>
 
                             {/* GOOGLE MAPS PANEL OR DETAILED FALLBACK */}
                             <div className="border border-zinc-200 rounded-3xl overflow-hidden bg-zinc-950 relative h-80 shadow-md">
-                              {hasValidKey ? (
+                              {trackingViewMode === 'map' ? (
                                 <APIProvider apiKey={API_KEY} version="weekly">
                                   <Map
                                     defaultCenter={translateGridToLatLng(60, 58)}
@@ -1370,13 +1432,17 @@ if (!isLoggedIn) {
                                   <div className="z-10 flex flex-col gap-1">
                                     <div className="flex justify-between items-center">
                                       <span className="text-[9px] bg-orange-600 text-white font-black px-2 py-0.5 rounded uppercase tracking-wider">SIMULATED COORDINATES DISPLAY</span>
-                                      <span className="text-[10px] text-zinc-400 font-bold">Google Maps Mode Offline</span>
+                                      <span className="text-[10px] text-zinc-400 font-bold">Status Summary Mode</span>
                                     </div>
                                     
-                                    <h4 className="text-sm font-black text-white mt-1">Want to trace with live, interactive Google Maps?</h4>
-                                    <p className="text-[11px] text-zinc-400 max-w-md leading-relaxed">
-                                      Paste your <strong className="text-orange-400 font-bold">GOOGLE_MAPS_PLATFORM_KEY</strong> in the <strong className="font-extrabold text-white">Settings (⚙️) &rarr; Secrets</strong> panel of AI Studio to visualize real-time Seattle routes and interactive courier locations.
-                                    </p>
+                                    {!hasValidKey && (
+                                      <>
+                                        <h4 className="text-sm font-black text-white mt-1">Want to trace with live, interactive Google Maps?</h4>
+                                        <p className="text-[11px] text-zinc-400 max-w-md leading-relaxed">
+                                          Paste your <strong className="text-orange-400 font-bold">GOOGLE_MAPS_PLATFORM_KEY</strong> in the <strong className="font-extrabold text-white">Settings (⚙️) &rarr; Secrets</strong> panel of AI Studio to visualize real-time Seattle routes and interactive courier locations.
+                                        </p>
+                                      </>
+                                    )}
                                   </div>
 
                                   {/* Simulated routing trace for offline resilience */}
