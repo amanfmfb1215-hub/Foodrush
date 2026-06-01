@@ -43,7 +43,9 @@ import {
   ChevronRight,
   Check,
   Phone,
-  Flame
+  Flame,
+  Package,
+  Utensils
 } from 'lucide-react';
 import { MenuItem, Restaurant, Order, OrderStatus, ChatMessage, Rider, PlatformAnalytics, Review, OrderItem } from './types';
 import AppFooter from './components/AppFooter';
@@ -73,6 +75,36 @@ const translateGridToLatLng = (gridLat: number, gridLng: number): { lat: number;
   const realLng = minLng + (gridLng / 100) * (maxLng - minLng);
 
   return { lat: realLat, lng: realLng };
+};
+
+const PrepCountdown = ({ minutes, status }: { minutes?: number, status: string }) => {
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (minutes !== undefined && status !== 'delivered' && status !== 'cancelled') {
+       if (secondsRemaining === null) {
+          setSecondsRemaining(minutes * 60);
+       }
+    }
+  }, [minutes, status, secondsRemaining]);
+
+  useEffect(() => {
+    if (secondsRemaining === null || secondsRemaining <= 0) return;
+    const intervalId = setInterval(() => {
+      setSecondsRemaining(prev => prev !== null ? prev - 1 : null);
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, [secondsRemaining]);
+
+  if (status === 'delivered') return <span>Delivered</span>;
+  if (status === 'cancelled') return <span>Cancelled</span>;
+  if (minutes === undefined) return <span>Calculating ETA...</span>;
+  
+  if (secondsRemaining !== null && secondsRemaining <= 0) return <span>Ready shortly</span>;
+
+  const m = Math.floor((secondsRemaining || 0) / 60);
+  const s = (secondsRemaining || 0) % 60;
+  return <span>{m}:{s.toString().padStart(2, '0')}</span>;
 };
 
 const RouteDisplay = ({
@@ -1722,26 +1754,62 @@ export default function App() {
 
                                   <div className="z-10 bg-zinc-900/90 px-3 py-1.5 rounded-xl text-[11px] flex justify-between items-center text-zinc-400 border border-zinc-800">
                                     <span className="flex items-center gap-1"><Bike className="w-3.5 h-3.5 text-orange-500" /> Active rider: {order.riderName || 'Assigning soon'}</span>
-                                    <span className="bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded text-[9px] font-bold font-sans">12 Mins remaining</span>
+                                    <span className="bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded text-[10px] font-bold font-sans tracking-widest tabular-nums"><PrepCountdown minutes={order.prepTimeRemaining} status={order.status} /></span>
                                   </div>
                                 </div>
                               )}
                             </div>
 
                             {/* Order Timeline steps */}
-                            <div className="flex flex-col gap-4">
-                              <h3 className="text-xs font-extrabold uppercase tracking-widest text-[#242424] px-1">Order Life Cycle Step Logs</h3>
-                              <div className="border-l-2 border-zinc-200 pl-4.5 py-1 flex flex-col gap-5 text-xs">
-                                {order.timeline.map((step, idx) => (
-                                  <div key={idx} className="relative flex gap-3 items-start">
-                                    <span className="absolute -left-7 w-4.5 h-4.5 bg-orange-600 rounded-full border-4 border-white flex items-center justify-center text-white"></span>
-                                    <div>
-                                      <p className="font-extrabold text-slate-900 uppercase">{step.status}</p>
-                                      <p className="text-zinc-500 mt-0.5 font-medium">{step.note}</p>
-                                      <span className="text-[10px] text-zinc-400">{new Date(step.timestamp).toLocaleTimeString()}</span>
+                            <div className="flex flex-col gap-5 pt-3">
+                              <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 flex items-center gap-2 px-1">
+                                <Activity className="w-4 h-4 text-orange-600" />
+                                Delivery Milestones
+                              </h3>
+                              <div className="flex flex-col pl-2 mt-2">
+                                {order.timeline.map((step, idx) => {
+                                  const isLast = idx === order.timeline.length - 1;
+                                  
+                                  const getStepIcon = (status: string) => {
+                                    switch(status.toLowerCase()) {
+                                      case 'placed': return <ClipboardList className="w-3.5 h-3.5" />;
+                                      case 'accepted': return <Clock className="w-3.5 h-3.5" />;
+                                      case 'preparing': return <ChefHat className="w-3.5 h-3.5" />;
+                                      case 'ready': return <Package className="w-3.5 h-3.5" />;
+                                      case 'dispatched': return <Bike className="w-3.5 h-3.5" />;
+                                      case 'picked_up': return <Utensils className="w-3.5 h-3.5" />;
+                                      case 'delivered': return <CheckCircle className="w-3.5 h-3.5" />;
+                                      default: return <Check className="w-3.5 h-3.5" />;
+                                    }
+                                  };
+
+                                  return (
+                                    <div key={idx} className="relative flex gap-4">
+                                      {/* Vertical Line Container */}
+                                      <div className="flex flex-col items-center">
+                                        <div className={`w-8 h-8 rounded-full border-2 z-10 flex items-center justify-center bg-white shadow-sm ${idx === 0 ? 'border-orange-500 text-orange-600 shadow-[0_0_0_4px_rgba(249,115,22,0.1)]' : 'border-zinc-200 text-zinc-400'}`}>
+                                          {getStepIcon(step.status)}
+                                        </div>
+                                        {!isLast && <div className={`w-0.5 h-full ${idx === 0 ? 'bg-orange-300' : 'bg-zinc-200'} -mt-1 -mb-1`} />}
+                                      </div>
+                                      
+                                      {/* Node Content */}
+                                      <div className="pb-8 flex-1 mt-1">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
+                                          <p className={`font-black text-sm uppercase tracking-wide ${idx === 0 ? 'text-orange-600' : 'text-slate-800'}`}>
+                                            {step.status}
+                                          </p>
+                                          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider bg-zinc-100 px-2 py-0.5 rounded-md inline-block w-fit">
+                                            {new Date(step.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                          </p>
+                                        </div>
+                                        <p className="text-zinc-500 text-xs mt-1.5 leading-relaxed font-medium">
+                                          {step.note}
+                                        </p>
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
 
