@@ -3,7 +3,11 @@ import {
   APIProvider,
   Map,
   AdvancedMarker,
-  Pin
+  Pin,
+  useMap,
+  useMapsLibrary,
+  InfoWindow,
+  useAdvancedMarkerRef
 } from '@vis.gl/react-google-maps';
 import {
   Compass,
@@ -69,6 +73,146 @@ const translateGridToLatLng = (gridLat: number, gridLng: number): { lat: number;
   const realLng = minLng + (gridLng / 100) * (maxLng - minLng);
 
   return { lat: realLat, lng: realLng };
+};
+
+const RouteDisplay = ({
+  origin,
+  destination
+}: {
+  origin: google.maps.LatLngLiteral;
+  destination: google.maps.LatLngLiteral;
+}) => {
+  const map = useMap();
+  const routesLib = useMapsLibrary('routes');
+  const polylinesRef = useRef<google.maps.Polyline[]>([]);
+
+  useEffect(() => {
+    if (!routesLib || !map || !origin || !destination) return;
+
+    // Clear previous routes/polylines
+    polylinesRef.current.forEach(p => p.setMap(null));
+    polylinesRef.current = [];
+
+    routesLib.Route.computeRoutes({
+      origin,
+      destination,
+      travelMode: 'DRIVING',
+      fields: ['path', 'viewport'],
+    })
+      .then(({ routes }) => {
+        if (routes?.[0]) {
+          // Create matching polylines
+          const newPolylines = routes[0].createPolylines();
+          newPolylines.forEach(p => {
+            p.setOptions({
+              strokeColor: '#ea580c',
+              strokeOpacity: 0.85,
+              strokeWeight: 5,
+            });
+          });
+
+          // Set map and track refs
+          newPolylines.forEach(p => p.setMap(map));
+          polylinesRef.current = newPolylines;
+
+          // Auto fit map bounds beautifully centered on the route
+          if (routes[0].viewport) {
+            map.fitBounds(routes[0].viewport);
+          } else {
+            // Fallback center or zoom if viewport not available
+            map.setCenter({
+              lat: (origin.lat + destination.lat) / 2,
+              lng: (origin.lng + destination.lng) / 2
+            });
+            map.setZoom(14);
+          }
+        }
+      })
+      .catch(err => {
+        console.warn('computeRoutes error:', err);
+      });
+
+    return () => {
+      polylinesRef.current.forEach(p => p.setMap(null));
+    };
+  }, [routesLib, map, origin.lat, origin.lng, destination.lat, destination.lng]);
+
+  return null;
+};
+
+const MapMarkerWithInfoWindow = ({
+  position,
+  title,
+  pinColor,
+  icon,
+  children
+}: {
+  position: google.maps.LatLngLiteral;
+  title: string;
+  pinColor: string;
+  icon: string;
+  children: React.ReactNode;
+}) => {
+  const [markerRef, marker] = useAdvancedMarkerRef();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <AdvancedMarker ref={markerRef} position={position} onClick={() => setOpen(true)}>
+        <Pin background={pinColor} borderColor="#fff" glyphColor="#fff" scale={1.15}>
+          <div className="text-sm p-1 font-black leading-none">{icon}</div>
+        </Pin>
+      </AdvancedMarker>
+      {open && (
+        <InfoWindow anchor={marker} onCloseClick={() => setOpen(false)}>
+          <div className="p-2 max-w-[220px] text-zinc-800 font-sans leading-relaxed">
+            <h4 className="font-black text-xs text-orange-600 uppercase tracking-wider mb-1">{title}</h4>
+            {children}
+          </div>
+        </InfoWindow>
+      )}
+    </>
+  );
+};
+
+const RiderMarkerWithInfoWindow = ({
+  position,
+  title,
+  riderName,
+  children
+}: {
+  position: google.maps.LatLngLiteral;
+  title: string;
+  riderName: string;
+  children: React.ReactNode;
+}) => {
+  const [markerRef, marker] = useAdvancedMarkerRef();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <AdvancedMarker ref={markerRef} position={position} onClick={() => setOpen(true)}>
+        <div className="relative flex flex-col items-center cursor-pointer">
+          {/* Pulse effect wrapper */}
+          <div className="absolute top-0 w-10 h-10 bg-orange-500/30 rounded-full animate-ping pointer-events-none font-sans"></div>
+          <div className="bg-orange-600 text-white w-9.5 h-9.5 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+            <Bike className="w-5 h-5 text-white" />
+          </div>
+          <div className="bg-zinc-900/95 text-[9px] text-zinc-100 px-2 py-0.5 rounded shadow mt-1.5 whitespace-nowrap border border-zinc-800 font-extrabold font-sans">
+            🚚 {riderName}
+          </div>
+        </div>
+      </AdvancedMarker>
+      {open && (
+        <InfoWindow anchor={marker} onCloseClick={() => setOpen(false)}>
+          <div className="p-2 max-w-[220px] text-zinc-800 font-sans leading-relaxed">
+            <h4 className="font-black text-xs text-orange-600 uppercase tracking-wider mb-1">{title}</h4>
+            {children}
+          </div>
+        </InfoWindow>
+      )}
+    </>
+  );
 };
 
 export default function App() {
@@ -1456,63 +1600,75 @@ export default function App() {
                             </div>
 
                             {/* GOOGLE MAPS PANEL OR DETAILED FALLBACK */}
-                            <div className="border border-zinc-200 rounded-3xl overflow-hidden bg-zinc-950 relative h-80 shadow-md">
+                            <div className="border border-zinc-200 rounded-3xl overflow-hidden bg-zinc-950 relative h-96 shadow-md">
                               {trackingViewMode === 'map' ? (
                                 <APIProvider apiKey={API_KEY} version="weekly">
-                                  <Map
-                                    defaultCenter={translateGridToLatLng(60, 58)}
-                                    defaultZoom={14}
-                                    mapId="DEMO_MAP_ID"
-                                    internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
-                                    style={{ width: '100%', height: '100%' }}
-                                    disableDefaultUI={true}
-                                    zoomControl={true}
-                                  >
-                                    {/* 1. Restaurant Marker */}
-                                    {(() => {
-                                      const restCoords = translateGridToLatLng(40, 40);
-                                      return (
-                                        <AdvancedMarker position={restCoords} title={order.restaurantName}>
-                                          <Pin background="#ea580c" borderColor="#fff" glyphColor="#fff" scale={1.1}>
-                                            <div className="text-xs p-1 font-black">🍳</div>
-                                          </Pin>
-                                        </AdvancedMarker>
-                                      );
-                                    })()}
+                                  {(() => {
+                                    const restCoords = translateGridToLatLng(40, 40);
+                                    const custCoords = translateGridToLatLng(80, 75);
+                                    const riderObj = riders.find(r => r.id === order.riderId || 'rider-1');
+                                    const riderPos = riderObj ? riderObj.location : { lat: 25, lng: 30 };
+                                    const realRiderCoords = translateGridToLatLng(riderPos.lat, riderPos.lng);
 
-                                    {/* 2. Customer Address Marker */}
-                                    {(() => {
-                                      const custCoords = translateGridToLatLng(80, 75);
-                                      return (
-                                        <AdvancedMarker position={custCoords} title="My Address">
-                                          <Pin background="#16a34a" borderColor="#fff" glyphColor="#fff" scale={1.1}>
-                                            <div className="text-xs p-1 font-black">🏠</div>
-                                          </Pin>
-                                        </AdvancedMarker>
-                                      );
-                                    })()}
+                                    return (
+                                      <Map
+                                        defaultCenter={{ lat: (restCoords.lat + custCoords.lat) / 2, lng: (restCoords.lng + custCoords.lng) / 2 }}
+                                        defaultZoom={13}
+                                        mapId="DEMO_MAP_ID"
+                                        internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
+                                        style={{ width: '100%', height: '100%' }}
+                                        disableDefaultUI={false}
+                                        gestureHandling="greedy"
+                                      >
+                                        {/* Auto-Centering and Interactive Driving Route Polylines */}
+                                        <RouteDisplay origin={restCoords} destination={custCoords} />
 
-                                    {/* 3. Live Rider Marker */}
-                                    {(() => {
-                                      const riderObj = riders.find(r => r.id === order.riderId || 'rider-1');
-                                      const riderPos = riderObj ? riderObj.location : { lat: 25, lng: 30 };
-                                      const realRiderCoords = translateGridToLatLng(riderPos.lat, riderPos.lng);
-                                      return (
-                                        <AdvancedMarker position={realRiderCoords} title={order.riderName || 'Rider'}>
-                                          <div className="relative flex flex-col items-center">
-                                            {/* Pulse effect wrapper */}
-                                            <div className="absolute top-0 w-10 h-10 bg-orange-500/30 rounded-full animate-ping pointer-events-none font-sans"></div>
-                                            <div className="bg-orange-600 text-white w-9 h-9 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-                                              <Bike className="w-5 h-5 text-white" />
-                                            </div>
-                                            <div className="bg-zinc-900/95 text-[9px] text-zinc-100 px-2 py-0.5 rounded shadow mt-1.5 whitespace-nowrap border border-zinc-800 font-extrabold font-sans">
-                                              🚚 {order.riderName || 'Zack'}
-                                            </div>
+                                        {/* 1. Restaurant Marker with InfoWindow */}
+                                        <MapMarkerWithInfoWindow
+                                          position={restCoords}
+                                          title="Restaurant Hub Kitchen"
+                                          pinColor="#ea580c"
+                                          icon="🍳"
+                                        >
+                                          <div className="space-y-1 mt-1 text-xs text-zinc-650">
+                                            <p className="font-bold text-zinc-950">{order.restaurantName}</p>
+                                            <p>📍 Kitchen preparing your order</p>
+                                            <p>🕒 Quick-dispatch certified partner</p>
                                           </div>
-                                        </AdvancedMarker>
-                                      );
-                                    })()}
-                                  </Map>
+                                        </MapMarkerWithInfoWindow>
+
+                                        {/* 2. Customer Address Marker with InfoWindow */}
+                                        <MapMarkerWithInfoWindow
+                                          position={custCoords}
+                                          title="Delivery Destination"
+                                          pinColor="#16a34a"
+                                          icon="🏠"
+                                        >
+                                          <div className="space-y-1 mt-1 text-xs text-zinc-650">
+                                            <p className="font-bold text-zinc-950">Dinner Drop-off Zone</p>
+                                            <p className="truncate">📍 {checkoutAddress || 'Default Drop Location'}</p>
+                                            <p>📱 {checkoutPhone || 'No contact specified'}</p>
+                                          </div>
+                                        </MapMarkerWithInfoWindow>
+
+                                        {/* 3. Live Rider Marker with InfoWindow */}
+                                        <RiderMarkerWithInfoWindow
+                                          position={realRiderCoords}
+                                          title="Live Dispatch Tracking"
+                                          riderName={order.riderName || 'Zack'}
+                                        >
+                                          <div className="space-y-1 mt-1 text-xs text-zinc-650">
+                                            <p className="font-bold text-zinc-950">Courier: {order.riderName || 'Zack'}</p>
+                                            <p className="text-orange-600 font-extrabold flex items-center gap-1">
+                                              <span className="w-2 h-2 rounded-full bg-orange-600 animate-ping"></span>
+                                              <span>Active GPS Route</span>
+                                            </p>
+                                            <p>🚲 Simulating route transit coordinates</p>
+                                          </div>
+                                        </RiderMarkerWithInfoWindow>
+                                      </Map>
+                                    );
+                                  })()}
                                 </APIProvider>
                               ) : (
                                 <div className="absolute inset-0 p-5 flex flex-col justify-between text-white relative">
