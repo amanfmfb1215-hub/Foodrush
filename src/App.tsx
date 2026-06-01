@@ -108,6 +108,8 @@ export default function App() {
   const [activeRestaurantId, setActiveRestaurantId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [trackingViewMode, setTrackingViewMode] = useState<'map' | 'summary'>('map');
+  const [deliveryRatingValue, setDeliveryRatingValue] = useState<number>(5);
+  const [deliveryFeedbackComment, setDeliveryFeedbackComment] = useState<string>('');
   const [showOrderHistory, setShowOrderHistory] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -185,6 +187,8 @@ export default function App() {
   useEffect(() => {
     if (activeOrderId) {
       fetchOrderChat(activeOrderId);
+      setDeliveryRatingValue(5);
+      setDeliveryFeedbackComment('');
     }
   }, [activeOrderId]);
 
@@ -487,22 +491,23 @@ export default function App() {
     }
   };
 
-  const submitOrderRating = async (orderId: string, rating: number) => {
+  const submitOrderRating = async (orderId: string, rating: number, comment?: string) => {
     try {
       const res = await fetch(`/api/orders/${orderId}/rating`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating })
+        body: JSON.stringify({ rating, comment })
       });
       if (res.ok) {
         const updatedOrder: Order = await res.json();
         setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
-      } else {
-        alert('Failed to submit rating.');
+        // Refetch chat logs so the user sees their feedback system-event in the timeline/messenger panel instantly
+        if (activeOrderId === orderId) {
+          fetchOrderChat(orderId);
+        }
       }
     } catch (e) {
       console.error(e);
-      alert('Error submitting rating.');
     }
   };
 
@@ -1493,6 +1498,88 @@ export default function App() {
                                     </div>
                                   </div>
                                 ))}
+                              </div>
+                            </div>
+
+                            {/* Live Delivery Experience Rating & Feedback Panel */}
+                            <div className="mt-6 border-t border-zinc-150 pt-6">
+                              <div className="bg-gradient-to-r from-orange-50 via-amber-50/50 to-orange-50/10 rounded-2xl p-5 border border-orange-100/70 shadow-sm">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-xs select-none">
+                                    ★
+                                  </div>
+                                  <div>
+                                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Rate Delivery Experience</h3>
+                                    <p className="text-[11px] text-zinc-500 mt-0.5">Provide feedback specifically for your courier and path dispatch.</p>
+                                  </div>
+                                </div>
+
+                                {order.rating !== undefined ? (
+                                  <div className="bg-white border border-orange-100 rounded-xl p-4 mt-3">
+                                    <div className="flex justify-between items-center mb-1.5 flex-wrap gap-1">
+                                      <span className="text-[9px] font-black uppercase tracking-wider text-green-700 bg-green-50 border border-green-150 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                        ✓ Feedback Logged
+                                      </span>
+                                      <div className="flex gap-0.5 text-amber-500">
+                                        {[1, 2, 3, 4, 5].map((s) => (
+                                          <span key={s} className="text-sm">
+                                            {s <= (order.rating || 0) ? '★' : '☆'}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-zinc-700 italic mt-1 font-medium bg-zinc-50/60 p-2.5 rounded-lg border border-zinc-100">
+                                      "{order.deliveryFeedback || 'Excellent courier dispatch service!'}"
+                                    </p>
+                                    <p className="text-[9px] text-zinc-400 mt-2 text-right">
+                                      Your feedback of Zack has been securely saved. Thank you!
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3.5 mt-3.5">
+                                    {/* Star selectors */}
+                                    <div className="flex items-center justify-between bg-white border border-zinc-150 p-3 rounded-xl">
+                                      <span className="text-xs font-bold text-zinc-650">Courier Rating:</span>
+                                      <div className="flex gap-1.5">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                          <button
+                                            key={star}
+                                            onClick={() => setDeliveryRatingValue(star)}
+                                            className="text-2xl transition hover:scale-110 active:scale-95 focus:outline-none cursor-pointer"
+                                            title={`Rate ${star} Stars`}
+                                          >
+                                            <span className={`${star <= deliveryRatingValue ? 'text-amber-500 font-sans' : 'text-zinc-200'}`}>
+                                              ★
+                                            </span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Comment Feedback Textarea */}
+                                    <div>
+                                      <label htmlFor="delivery-comment" className="block text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-1 pl-px">
+                                        Feedback Notes / Comments
+                                      </label>
+                                      <textarea
+                                        id="delivery-comment"
+                                        placeholder="Was Zack friendly? Did the insulation bag keep things hot? Tell us about your courier experience..."
+                                        value={deliveryFeedbackComment}
+                                        onChange={(e) => setDeliveryFeedbackComment(e.target.value)}
+                                        className="w-full bg-white border border-zinc-200 hover:border-zinc-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl p-3 text-xs text-slate-800 placeholder-zinc-400 focus:outline-none transition leading-relaxed min-h-[70px] resize-none font-medium"
+                                      />
+                                    </div>
+
+                                    {/* Submit action */}
+                                    <button
+                                      onClick={() => submitOrderRating(order.id, deliveryRatingValue, deliveryFeedbackComment.trim())}
+                                      className="w-full bg-orange-600 hover:bg-orange-700 active:scale-[0.99] text-white text-xs font-black py-2.5 rounded-xl transition shadow-md shadow-orange-500/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                                    >
+                                      <span>Post Delivery Feedback</span>
+                                      <span>★</span>
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

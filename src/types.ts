@@ -94,6 +94,7 @@ export interface Order {
   deliveryNote?: string;
   prepTimeRemaining?: number; // in mins
   rating?: number; // 1-5
+  deliveryFeedback?: string;
 }
 
 export interface ChatMessage {
