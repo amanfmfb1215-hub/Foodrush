@@ -46,13 +46,18 @@ import {
   Flame,
   Package,
   Utensils,
-  Download
+  Download,
+  Printer,
+  Eye
 } from 'lucide-react';
 import { MenuItem, Restaurant, Order, OrderStatus, ChatMessage, Rider, PlatformAnalytics, Review, OrderItem } from './types';
 import AppFooter from './components/AppFooter';
 import OrderTimer from './components/OrderTimer';
 import CustomerOrderETA from './components/CustomerOrderETA';
 import GoogleLoginScreen from './components/GoogleLoginScreen';
+import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode';
+import { motion, AnimatePresence } from 'motion/react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { STATIC_FALLBACK_RESTAURANTS, STATIC_FALLBACK_RIDERS, STATIC_FALLBACK_ANALYTICS } from './fallbackData';
 
@@ -308,6 +313,31 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [includeQrOnReceipt, setIncludeQrOnReceipt] = useState<boolean>(true);
+  const [pdfLayoutFormat, setPdfLayoutFormat] = useState<'a4' | 'thermal'>('a4');
+  const [showPdfPreviewModal, setShowPdfPreviewModal] = useState<boolean>(false);
+  const [qrCodePreviewDataUrl, setQrCodePreviewDataUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (activeOrderId && includeQrOnReceipt) {
+      const order = orders.find(o => o.id === activeOrderId);
+      if (order) {
+        const qrContent = JSON.stringify({
+          foodrush_id: order.id,
+          restaurant: order.restaurantName,
+          itemsCount: order.items.length,
+          totalAmount: `$${order.total.toFixed(2)}`,
+          payment: order.paymentMethod || 'PAYPAL',
+          verifiedAt: new Date().toISOString()
+        });
+        QRCode.toDataURL(qrContent, { errorCorrectionLevel: 'M', margin: 1 })
+          .then(url => setQrCodePreviewDataUrl(url))
+          .catch(err => console.warn('Failed to generate preview QR Code:', err));
+      }
+    } else {
+      setQrCodePreviewDataUrl('');
+    }
+  }, [activeOrderId, includeQrOnReceipt, orders]);
 
   // System toasts
   const [toasts, setToasts] = useState<{ id: string; title: string; message: string; icon?: React.ReactNode }[]>([]);
@@ -562,6 +592,656 @@ export default function App() {
     link.download = `receipt-${order.id}.txt`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPdfReceipt = async (order: Order) => {
+    try {
+      if (pdfLayoutFormat === 'thermal') {
+        const thermalHeight = Math.max(150, 115 + (order.items.length * 8) + (order.deliveryNote ? 15 : 0) + (includeQrOnReceipt ? 45 : 0));
+        const doc = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: [80, thermalHeight]
+        });
+
+        // Add faint, diagonal background watermarks (ensuring text legibility)
+        doc.setTextColor(245, 245, 246);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.text('FoodRush', 40, 50, { align: 'center', angle: 320 });
+        doc.text('FoodRush', 40, 100, { align: 'center', angle: 320 });
+        if (thermalHeight > 185) {
+          doc.text('FoodRush', 40, 155, { align: 'center', angle: 320 });
+        }
+
+        // Set standard font
+        doc.setFont('helvetica', 'normal');
+
+        // Circular badge top center
+        doc.setFillColor(30, 41, 59); // Black-slate
+        doc.circle(40, 12, 5, 'F'); // Radius 5mm at X=40, Y=12
+
+        // Monogram FR inside
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text('FR', 40, 14.5, { align: 'center' });
+
+        // Header Wordmark
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(14);
+        doc.text('FoodRush Ltd.', 40, 22, { align: 'center' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(148, 163, 184); // slate-400
+        doc.text('HYPERLOCAL DELIVERIES & GASTRONOMY', 40, 25.5, { align: 'center' });
+
+        // Dashed divider line
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.setLineDashPattern([2, 1.5], 0);
+        doc.line(8, 29, 72, 29);
+        doc.setLineDashPattern([], 0); // Reset
+
+        // Order Metadata
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text('ORDER METADATA', 8, 34);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+
+        let y = 39;
+        doc.text('Order ID:', 8, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text(`#${order.id}`, 30, y);
+
+        y += 4.5;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        doc.text('Placed Time:', 8, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text(new Date(order.createdAt).toLocaleString(), 30, y);
+
+        y += 4.5;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        doc.text('Merchant:', 8, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text(order.restaurantName, 30, y);
+
+        y += 4.5;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        doc.text('Payment Mode:', 8, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text(order.paymentMethod ? order.paymentMethod.toUpperCase() : 'DEBIT CARD', 30, y);
+
+        y += 6;
+        // Recipient / Dest
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(30, 41, 59);
+        doc.text('LOGISTICS DESTINATION', 8, y);
+        
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text('Recipient:', 8, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text(order.customerName || 'Loyal Customer', 30, y);
+
+        y += 4.5;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        doc.text('Address:', 8, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(15, 23, 42);
+        const addressLines = doc.splitTextToSize(order.customerAddress || 'Google AI Studio Workstation', 42);
+        doc.text(addressLines, 30, y);
+
+        y += addressLines.length * 3.5 + 1;
+
+        if (order.deliveryNote) {
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text('Note:', 8, y);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(15, 23, 42);
+          const noteLines = doc.splitTextToSize(order.deliveryNote, 42);
+          doc.text(noteLines, 30, y);
+          y += noteLines.length * 3.5 + 1;
+        }
+
+        y += 3;
+        // Dashed divider line
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.setLineDashPattern([2, 1.5], 0);
+        doc.line(8, y, 72, y);
+        doc.setLineDashPattern([], 0); // Reset
+
+        y += 5;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(30, 41, 59);
+        doc.text('GASTRONOMY INVENTORY', 8, y);
+
+        y += 5;
+        // Table columns headers
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text('ITEM', 8, y);
+        doc.text('QTY', 48, y, { align: 'center' });
+        doc.text('SUBTOTAL', 72, y, { align: 'right' });
+
+        y += 3;
+        doc.line(8, y, 72, y);
+        
+        y += 4;
+        let itemsSubtotal = 0;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(15, 23, 42);
+
+        order.items.forEach((item) => {
+          const itemCost = item.price * item.quantity;
+          itemsSubtotal += itemCost;
+
+          const itemNameLines = doc.splitTextToSize(item.name, 36);
+          const lineY = y;
+          doc.text(itemNameLines, 8, lineY);
+          
+          doc.text(item.quantity.toString(), 48, lineY, { align: 'center' });
+          doc.text(`$${itemCost.toFixed(2)}`, 72, lineY, { align: 'right' });
+
+          y += Math.max(itemNameLines.length * 3.5, 5);
+        });
+
+        y += 2;
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.setLineDashPattern([2, 1.5], 0);
+        doc.line(8, y, 72, y);
+        doc.setLineDashPattern([], 0); // Reset
+
+        y += 5;
+        // Summary pricing
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        
+        doc.text('Items Subtotal:', 45, y, { align: 'right' });
+        doc.setTextColor(15, 23, 42);
+        doc.text(`$${itemsSubtotal.toFixed(2)}`, 72, y, { align: 'right' });
+
+        y += 4;
+        doc.setTextColor(100, 116, 139);
+        const deliveryFeeValue = (order.deliveryFee !== undefined) ? order.deliveryFee : 2.99;
+        doc.text('Dispatch Fee:', 45, y, { align: 'right' });
+        doc.setTextColor(15, 23, 42);
+        doc.text(deliveryFeeValue === 0 ? 'FREE' : `$${deliveryFeeValue.toFixed(2)}`, 72, y, { align: 'right' });
+
+        y += 4;
+        doc.setTextColor(100, 116, 139);
+        const serviceTax = 1.50;
+        doc.text('Tax & Surcharge:', 45, y, { align: 'right' });
+        doc.setTextColor(15, 23, 42);
+        doc.text(`$${serviceTax.toFixed(2)}`, 72, y, { align: 'right' });
+
+        const discount = Math.max(0, (itemsSubtotal + deliveryFeeValue + serviceTax) - order.total);
+        if (discount > 0) {
+          y += 4;
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(220, 38, 38);
+          doc.text('Discount:', 45, y, { align: 'right' });
+          doc.text(`-$${discount.toFixed(2)}`, 72, y, { align: 'right' });
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(15, 23, 42);
+        }
+
+        y += 6;
+        // Double lines for grand total
+        doc.setDrawColor(30, 41, 59);
+        doc.setLineWidth(0.5);
+        doc.line(35, y - 4, 72, y - 4);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(30, 41, 59);
+        doc.text('GRAND TOTAL:', 45, y);
+        doc.text(`$${order.total.toFixed(2)}`, 72, y, { align: 'right' });
+
+        doc.line(35, y + 1.5, 72, y + 1.5);
+
+        // 6. QR Code inside thermal
+        if (includeQrOnReceipt) {
+          try {
+            const qrContent = JSON.stringify({
+              foodrush_id: order.id,
+              restaurant: order.restaurantName,
+              itemsCount: order.items.length,
+              totalAmount: `$${order.total.toFixed(2)}`,
+              payment: order.paymentMethod || 'PAYPAL',
+              verifiedAt: new Date().toISOString()
+            });
+
+            const qrDataUrl = await QRCode.toDataURL(qrContent, { errorCorrectionLevel: 'M', margin: 1 });
+            
+            y += 10;
+            doc.addImage(qrDataUrl, 'PNG', 28, y, 24, 24);
+
+            y += 28;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(30, 41, 59);
+            doc.text('STAFF VERIFICATION GATEWAY', 40, y, { align: 'center' });
+
+            y += 4.5;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+            doc.setTextColor(100, 116, 139);
+            const scanHelpLines = doc.splitTextToSize('Staff scan the code above with any terminal to access internal order support and route details instantly.', 64);
+            doc.text(scanHelpLines, 40, y, { align: 'center' });
+            y += scanHelpLines.length * 3 + 2;
+          } catch (qrErr) {
+            console.warn('Failed to embed QR Code in thermal PDF:', qrErr);
+          }
+        } else {
+          y += 12;
+        }
+
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(6);
+        doc.setTextColor(148, 163, 184);
+        doc.text('Seattle, WA • United States', 40, y, { align: 'center' });
+        y += 3.5;
+        doc.text('Powered by Google AI Studio Build', 40, y, { align: 'center' });
+
+        doc.save(`FoodRush-ThermalReceipt-${order.id}.pdf`);
+
+        addToast(
+          'Print Receipt',
+          `Your printable POS thermal receipt for Order #${order.id} is downloaded and ready.`,
+          <Printer className="w-5 h-5 text-orange-500" />
+        );
+      } else {
+        const doc = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+        // Add faint, diagonal background watermarks (ensuring text legibility)
+        doc.setTextColor(244, 244, 246);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(54);
+        doc.text('FoodRush', 105, 100, { align: 'center', angle: 315 });
+        doc.text('FoodRush', 105, 200, { align: 'center', angle: 315 });
+
+        // Set standard font
+        doc.setFont('helvetica', 'normal');
+
+        // 1. BRAND HEADER & CUSTOM VECTOR LOGO
+        // Brand Bar Highlight Accents
+        doc.setFillColor(234, 88, 12); // #ea580c (Orange-600)
+        doc.rect(15, 12, 180, 1.5, 'F'); // Top accent strip
+
+        // Elegant circular badge representation of FoodRush brand
+        doc.setFillColor(234, 88, 12);
+        doc.circle(23, 23, 7, 'F'); // Radius 7mm at center X=23, Y=23
+
+        // Monogram FR inside the circle
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('FR', 23, 26.5, { align: 'center' });
+
+        // Fast-forward delivery dash trails behind the circle to convey motion
+        doc.setDrawColor(251, 146, 60); // orange-400
+        doc.setLineWidth(1.0);
+        doc.line(32, 20.5, 42, 20.5);
+        doc.line(32, 23, 38, 23);
+
+        // Main Brand Wordmark next to badge
+        doc.setTextColor(30, 41, 59); // slate-800
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.text('FoodRush', 38, 24);
+
+        // Suffix orange dot marker
+        doc.setTextColor(234, 88, 12);
+        doc.text('.', 74, 24);
+
+        // On-demand logistics subtitle
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(148, 163, 184); // slate-400
+        doc.text('HYPERLOCAL ON-DEMAND DELIVERIES & GASTRONOMY SQUAD', 38, 28);
+
+        // Professional print badge certifying logistical scanning
+        doc.setFillColor(254, 243, 199); // amber-100
+        doc.rect(138, 16, 57, 10, 'F');
+        doc.setDrawColor(251, 191, 36); // amber-400
+        doc.setLineWidth(0.35);
+        doc.rect(138, 16, 57, 10, 'D');
+
+        doc.setTextColor(180, 83, 9); // amber-800
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text('LOGISTICS SCAN CERTIFIED', 166.5, 22.5, { align: 'center' });
+
+        // Solid dividing line below header banner
+        doc.setDrawColor(226, 232, 240); // slate-200
+        doc.setLineWidth(0.4);
+        doc.line(15, 34, 195, 34);
+
+        // 2. RECEIPT METADATA BLOCK
+        doc.setTextColor(30, 41, 59); // slate-800
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('1. ORDER METADATA', 15, 43);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139); // slate-500
+        
+        const leftColX = 15;
+        const rightColX = 110;
+        let y = 52;
+
+        // Group metadata block with elegant light card outline
+        doc.setFillColor(248, 250, 252); // slate-50 background card
+        doc.rect(15, 46, 180, 24, 'F');
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.25);
+        doc.rect(15, 46, 180, 24, 'D');
+
+        // Row 1 Metadata
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105); // slate-600
+        doc.text('Order Reference ID:', leftColX + 4, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(15, 23, 42); // slate-900
+        doc.text(`#${order.id}`, leftColX + 42, y);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text('Placed Time:', rightColX + 4, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(15, 23, 42);
+        doc.text(new Date(order.createdAt).toLocaleString(), rightColX + 30, y);
+
+        y += 8;
+
+        // Row 2 Metadata
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text('Restaurant / Merchant:', leftColX + 4, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(15, 23, 42);
+        doc.text(order.restaurantName, leftColX + 42, y);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text('Payment Gateway:', rightColX + 4, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(15, 23, 42);
+        doc.text(order.paymentMethod ? order.paymentMethod.toUpperCase() : 'DEBIT CARD', rightColX + 42, y);
+
+        y += 18;
+
+        // 3. SECURE DELIVERY INFORMATION
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('2. SECURE LOGISTICS & DESTINATION', 15, y - 4);
+
+        // Light card summary for Destination
+        const noteOffsetHeight = order.deliveryNote ? 25 : 17;
+        doc.setFillColor(248, 250, 252);
+        doc.rect(15, y - 1.5, 180, noteOffsetHeight, 'F');
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.25);
+        doc.rect(15, y - 1.5, 180, noteOffsetHeight, 'D');
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+
+        // Recipient
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text('Recipient Name:', leftColX + 4, y + 4);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(15, 23, 42);
+        doc.text(order.customerName || 'Loyal Customer', leftColX + 36, y + 4);
+
+        // Destination Address - Auto wrapping text meticulously
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text('Destination Address:', leftColX + 4, y + 10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(15, 23, 42);
+        const addressLines = doc.splitTextToSize(order.customerAddress || 'Google AI Studio Workstation', 135);
+        doc.text(addressLines, leftColX + 36, y + 10);
+
+        y += 10 + (addressLines.length * 4.5);
+
+        if (order.deliveryNote) {
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(71, 85, 105);
+          doc.text('Logistics Instructions:', leftColX + 4, y);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(15, 23, 42);
+          const noteLines = doc.splitTextToSize(order.deliveryNote, 135);
+          doc.text(noteLines, leftColX + 36, y);
+          y += noteLines.length * 4.5;
+        }
+
+        y += 14;
+
+        // 4. ORDER ITEMS TABLE HEADER
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('3. COMPREHENSIVE GASTRONOMY INVENTORY', 15, y - 4);
+
+        // Table Header Frame
+        doc.setFillColor(30, 41, 59); // deep slate background
+        doc.rect(15, y - 1, 180, 8, 'F');
+
+        // Table Column Titles
+        doc.setFontSize(8.5);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ITEM DESCRIPTION', 19, y + 4.5);
+        doc.text('UNIT PRICE', 120, y + 4.5, { align: 'right' });
+        doc.text('QTY', 150, y + 4.5, { align: 'center' });
+        doc.text('LINE SUBTOTAL', 191, y + 4.5, { align: 'right' });
+
+        y += 10;
+
+        // Table Rows with exquisite spacing and subtle padded borders
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(30, 41, 59);
+        let itemsSubtotal = 0;
+        
+        order.items.forEach((item, index) => {
+          const itemCost = item.price * item.quantity;
+          itemsSubtotal += itemCost;
+
+          const itemNameLines = doc.splitTextToSize(item.name, 90);
+          const rowHeight = Math.max(itemNameLines.length * 5, 12); // Padded row height
+
+          // Draw light grey background for alternating items
+          if (index % 2 === 0) {
+            doc.setFillColor(248, 250, 252);
+            doc.rect(15, y - 3, 180, rowHeight, 'F');
+          }
+
+          // Draw super fine borderline
+          doc.setDrawColor(241, 245, 249);
+          doc.setLineWidth(0.2);
+          doc.line(15, y + rowHeight - 3, 195, y + rowHeight - 3);
+
+          // Render values
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(15, 23, 42);
+          doc.text(itemNameLines, 19, y + 4);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(71, 85, 105);
+          doc.text(`$${item.price.toFixed(2)}`, 120, y + 4, { align: 'right' });
+          doc.text(item.quantity.toString(), 150, y + 4, { align: 'center' });
+
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(15, 23, 42);
+          doc.text(`$${itemCost.toFixed(2)}`, 191, y + 4, { align: 'right' });
+
+          y += rowHeight;
+        });
+
+        y += 5;
+
+        // 5. SUMMARY PRICING BLOCK
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+
+        const summaryLabelX = 145;
+        const summaryValueX = 191;
+
+        // Items Subtotal
+        doc.setTextColor(100, 116, 139);
+        doc.text('Items Subtotal:', summaryLabelX, y, { align: 'right' });
+        doc.setTextColor(15, 23, 42);
+        doc.text(`$${itemsSubtotal.toFixed(2)}`, summaryValueX, y, { align: 'right' });
+        y += 6;
+
+        // Delivery Fee
+        doc.setTextColor(100, 116, 139);
+        const deliveryFeeValue = (order.deliveryFee !== undefined) ? order.deliveryFee : 2.99;
+        doc.text('Secure Logistics Dispatch Fee:', summaryLabelX, y, { align: 'right' });
+        doc.setTextColor(15, 23, 42);
+        doc.text(deliveryFeeValue === 0 ? 'FREE (VIP)' : `$${deliveryFeeValue.toFixed(2)}`, summaryValueX, y, { align: 'right' });
+        y += 6;
+
+        // Service Fee/Tax
+        doc.setTextColor(100, 116, 139);
+        const serviceTax = 1.50;
+        doc.text('State Surcharges & Tax:', summaryLabelX, y, { align: 'right' });
+        doc.setTextColor(15, 23, 42);
+        doc.text(`$${serviceTax.toFixed(2)}`, summaryValueX, y, { align: 'right' });
+        y += 6;
+
+        // Discount
+        const discount = Math.max(0, (itemsSubtotal + deliveryFeeValue + serviceTax) - order.total);
+        if (discount > 0) {
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(220, 38, 38); // red-600
+          doc.text('Discount Subventions:', summaryLabelX, y, { align: 'right' });
+          doc.text(`-$${discount.toFixed(2)}`, summaryValueX, y, { align: 'right' });
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(30, 41, 59);
+          y += 6;
+        }
+
+        // Grand Total Premium Frame
+        doc.setFillColor(254, 242, 238); // orange-50 very soft hue
+        doc.rect(110, y - 4, 85, 11, 'F');
+        doc.setDrawColor(253, 186, 116); // orange-300
+        doc.rect(110, y - 4, 85, 11, 'D');
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10.5);
+        doc.setTextColor(30, 41, 59);
+        doc.text('Authenticated Grand Total:', summaryLabelX, y + 3, { align: 'right' });
+        doc.setTextColor(234, 88, 12); // Orange-600
+        doc.setFontSize(12);
+        doc.text(`$${order.total.toFixed(2)}`, summaryValueX, y + 3, { align: 'right' });
+
+        // 6. STAFF SEAMLESS VERIFICATION QR
+        if (includeQrOnReceipt) {
+          try {
+            const qrContent = JSON.stringify({
+              foodrush_id: order.id,
+              restaurant: order.restaurantName,
+              itemsCount: order.items.length,
+              totalAmount: `$${order.total.toFixed(2)}`,
+              payment: order.paymentMethod || 'PAYPAL',
+              verifiedAt: new Date().toISOString()
+            });
+            
+            // Generate base64 representation of QR Code
+            const qrDataUrl = await QRCode.toDataURL(qrContent, { errorCorrectionLevel: 'M', margin: 1 });
+            
+            const qrY = 225;
+            doc.setDrawColor(226, 232, 240); // slate-200
+            doc.setFillColor(250, 250, 250); // slight off-white
+            doc.rect(15, qrY, 180, 36, 'FD');
+    
+            // Draw QR Image
+            doc.addImage(qrDataUrl, 'PNG', 18, qrY + 3, 30, 30);
+    
+            // Add verification details
+            doc.setTextColor(30, 41, 59); // slate-800
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9.5);
+            doc.text('STAFF VERIFICATION GATEWAY', 52, qrY + 7);
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(100, 116, 139); // slate-500
+            doc.text('Scan this QR code with any FoodRush logistics scanner or courier handheld terminal to instantly check order verification, validate rider association, and view real-time GPS tracking logs.', 52, qrY + 12, { maxWidth: 135 });
+    
+            // Add 'Scan for Support' block
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(234, 88, 12); // Orange-600
+            doc.text('Scan for Support:', 52, qrY + 24);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(71, 85, 105); // slate-600
+            doc.text('Staff can scan this code to instantly open the live order details and dispatch timeline in the internal Admin Portal.', 77, qrY + 24, { maxWidth: 110 });
+    
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(6.5);
+            doc.setTextColor(148, 163, 184); // slate-400
+            doc.text('Authorized Personnel Only • Secure Data Cryptographic Protocol v1.4', 52, qrY + 31);
+          } catch (qrErr) {
+            console.warn('Failed to embed QR Code in PDF:', qrErr);
+          }
+        }
+
+        // Reset styles for watermark
+        doc.setTextColor(100, 116, 139);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        
+        // Footer watermark
+        doc.text('Generating instant, delicious memories. Thank you for using FoodRush!', 105, 275, { align: 'center' });
+        doc.text('Seattle, WA • United States • Powered by Google AI Studio Build', 105, 280, { align: 'center' });
+
+        doc.save(`FoodRush-Receipt-${order.id}.pdf`);
+
+        addToast(
+          'Print Receipt',
+          `Your printable PDF receipt for Order #${order.id} from ${order.restaurantName} is downloaded and ready.`,
+          <Printer className="w-5 h-5 text-orange-500" />
+        );
+      }
+    } catch (pdfErr) {
+      console.error('PDF Generation Failure:', pdfErr);
+      // Fallback to text download
+      handleDownloadReceipt(order);
+    }
   };
 
   const safeJson = async (res: Response) => {
@@ -1864,7 +2544,8 @@ export default function App() {
                       const order = orders.find(o => o.id === activeOrderId);
                       if (!order) return <p>Could not locate active order data.</p>;
                       return (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <>
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                           
                           {/* Live delivery status timeline */}
                           <div className="lg:col-span-2 flex flex-col gap-6 bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm">
@@ -1911,16 +2592,95 @@ export default function App() {
                                       )}
                                     </button>
                                     <button
-                                      onClick={() => handleDownloadReceipt(order)}
-                                      className="flex items-center justify-center gap-1.5 border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 px-2.5 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                                      title="Download Request as Text"
+                                      onClick={() => handleDownloadPdfReceipt(order)}
+                                      className="flex items-center justify-center gap-1.5 border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700 hover:border-orange-300 px-2.5 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer shadow-sm"
+                                      title="Download Beautiful and Printable PDF Receipt"
+                                      id="btn-download-pdf-receipt"
                                     >
                                       <Download className="w-3.5 h-3.5" />
-                                      <span>Receipt</span>
+                                      <span>PDF Receipt</span>
                                     </button>
+                                    <button
+                                      onClick={() => handleDownloadReceipt(order)}
+                                      className="flex items-center justify-center gap-1.5 border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:border-zinc-300 px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+                                      title="Download Plain Text Receipt"
+                                    >
+                                      <span>TXT</span>
+                                    </button>
+                                    
+                                    {/* Settings Toggle for PDF QR Code */}
+                                    <div className="flex items-center gap-1.5 border border-zinc-200 bg-zinc-50 px-2.5 py-1 rounded-xl text-[10px] font-bold text-zinc-600 shadow-sm">
+                                      <span className="select-none">Receipt QR</span>
+                                      <button
+                                        onClick={() => setIncludeQrOnReceipt(prev => !prev)}
+                                        className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${includeQrOnReceipt ? 'bg-orange-600' : 'bg-zinc-300'}`}
+                                        title="Toggle QR code inclusion on PDF receipt"
+                                        id="toggle-pdf-qr"
+                                      >
+                                        <span
+                                          className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${includeQrOnReceipt ? 'translate-x-3' : 'translate-x-0'}`}
+                                        />
+                                      </button>
+                                    </div>
+
+                                    {/* Layout Format Dropdown Selector */}
+                                    <div className="flex items-center gap-1.5 border border-zinc-200 bg-zinc-50 pl-2.5 pr-1.5 py-1 rounded-xl text-[10px] font-bold text-zinc-600 shadow-sm">
+                                      <span className="select-none text-zinc-400">Format</span>
+                                      <select
+                                        value={pdfLayoutFormat}
+                                        onChange={(e) => setPdfLayoutFormat(e.target.value as 'a4' | 'thermal')}
+                                        className="bg-transparent text-zinc-700 outline-none cursor-pointer text-[10px] font-extrabold border-none p-0 focus:ring-0 focus:outline-none"
+                                        title="Choose receipt print layout format"
+                                        id="pdf-layout-selector"
+                                      >
+                                        <option value="a4" className="bg-white">A4 (Letter)</option>
+                                        <option value="thermal" className="bg-white">Thermal (Roll)</option>
+                                      </select>
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowPdfPreviewModal(true)}
+                                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-100/50 p-1 rounded-md transition-colors shadow-sm ml-1 flex items-center"
+                                        title="Show Instant PDF Receipt Layout Preview"
+                                        id="btn-trigger-pdf-preview"
+                                      >
+                                        <Eye className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                                 <p className="text-xs text-zinc-400 mt-1">From <strong>{order.restaurantName}</strong></p>
+                                
+                                <AnimatePresence>
+                                  {includeQrOnReceipt && qrCodePreviewDataUrl && (
+                                    <motion.div
+                                      initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                                      exit={{ opacity: 0, scale: 0.9, y: -4 }}
+                                      transition={{ duration: 0.25, ease: 'easeOut' }}
+                                      className="mt-3 bg-orange-50 border border-orange-200/60 rounded-2xl p-3.5 flex gap-3.5 items-center shadow-sm select-none"
+                                    >
+                                      <div className="bg-white p-2 rounded-xl border border-orange-100 flex-shrink-0 shadow-sm">
+                                        <img
+                                          src={qrCodePreviewDataUrl}
+                                          alt="Staff Verification QR Preview"
+                                          className="w-12 h-12"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                          <span className="text-[9px] text-orange-850 font-extrabold uppercase tracking-widest">
+                                            Verification Gateway
+                                          </span>
+                                        </div>
+                                        <p className="text-[10px] text-zinc-500 mt-0.5 leading-tight font-medium max-w-sm">
+                                          Toggle is active. Scan support QR code on your printed receipt to instantly locate or verify in the dispatcher terminal.
+                                        </p>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
                               </div>
                               <div className="flex flex-wrap items-center gap-4">
                                 <CustomerOrderETA order={order} />
@@ -1931,6 +2691,90 @@ export default function App() {
                                 </div>
                               </div>
                             </div>
+
+                            {/* Order Progress Bar */}
+                            {(() => {
+                              const { percent, label } = (() => {
+                                switch (order.status) {
+                                  case 'placed': return { percent: 15, label: 'Order Placed' };
+                                  case 'accepted': return { percent: 30, label: 'Accepted by Restaurant' };
+                                  case 'preparing': return { percent: 50, label: 'Preparing Food' };
+                                  case 'ready': return { percent: 65, label: 'Food Ready for Pickup' };
+                                  case 'dispatched': return { percent: 80, label: 'Courier Headed to Restaurant' };
+                                  case 'picked_up': return { percent: 92, label: 'Courier Out for Delivery' };
+                                  case 'delivered': return { percent: 100, label: 'Delivered!' };
+                                  case 'cancelled': return { percent: 100, label: 'Cancelled' };
+                                  default: return { percent: 15, label: 'Processing' };
+                                }
+                              })();
+
+                              const milestones = [
+                                { label: 'Placed', isDone: ['placed', 'accepted', 'preparing', 'ready', 'dispatched', 'picked_up', 'delivered'].includes(order.status), icon: '📝' },
+                                { label: 'Preparing', isDone: ['preparing', 'ready', 'dispatched', 'picked_up', 'delivered'].includes(order.status), icon: '🍳' },
+                                { label: 'In Transit', isDone: ['dispatched', 'picked_up', 'delivered'].includes(order.status), icon: '🛵' },
+                                { label: 'Delivered', isDone: ['delivered'].includes(order.status), icon: '🎁' }
+                              ];
+
+                              const isCancelled = order.status === 'cancelled';
+
+                              return (
+                                <div className="bg-zinc-50 border border-zinc-200 rounded-3xl p-5 flex flex-col gap-4 shadow-sm">
+                                  <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`w-2.5 h-2.5 rounded-full ${isCancelled ? 'bg-rose-500' : 'bg-orange-500 animate-ping'}`} />
+                                      <p className="text-sm font-black text-slate-800">
+                                        Status: <span className={isCancelled ? 'text-rose-600' : 'text-orange-600'}>{label}</span>
+                                      </p>
+                                    </div>
+                                    <span className="text-xs font-black text-zinc-500 bg-zinc-205/10 px-2.5 py-1 rounded-full border border-zinc-300">
+                                      {isCancelled ? 'Cancelled' : `${percent}% Complete`}
+                                    </span>
+                                  </div>
+
+                                  {/* Progress bar line */}
+                                  <div className="relative w-full h-3 bg-zinc-200 rounded-full overflow-hidden shadow-inner">
+                                    <div 
+                                      className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                                        isCancelled 
+                                          ? 'bg-rose-500' 
+                                          : 'bg-gradient-to-r from-orange-500 via-orange-600 to-rose-500'
+                                      }`}
+                                      style={{ width: `${percent}%` }}
+                                    />
+                                  </div>
+
+                                  {/* Milestone circles */}
+                                  <div className="grid grid-cols-4 gap-2 text-center mt-1">
+                                    {milestones.map((m, idx) => (
+                                      <div key={idx} className="flex flex-col items-center gap-1.5">
+                                        <div 
+                                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-sm transition-all border ${
+                                            isCancelled
+                                              ? 'border-zinc-200 bg-zinc-100 opacity-55'
+                                              : m.isDone
+                                                ? 'bg-orange-500 border-orange-600 text-white font-bold scale-110 shadow-[0_0_8px_rgba(234,88,12,0.2)]'
+                                                : 'bg-white border-zinc-200 text-zinc-400'
+                                          }`}
+                                        >
+                                          <span>{m.icon}</span>
+                                        </div>
+                                        <span 
+                                          className={`text-[10px] font-bold tracking-tight ${
+                                            isCancelled
+                                              ? 'text-zinc-400 font-medium'
+                                              : m.isDone 
+                                                ? 'text-orange-600 font-black' 
+                                                : 'text-zinc-500'
+                                          }`}
+                                        >
+                                          {m.label}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
 
                             {/* GOOGLE MAPS PANEL OR DETAILED FALLBACK */}
                             <div className="border border-zinc-200 rounded-3xl overflow-hidden bg-zinc-950 relative h-96 shadow-md">
@@ -2252,7 +3096,360 @@ export default function App() {
                             </div>
                           </div>
 
-                        </div>
+                          </div>
+
+                          {/* Beautiful Receipt Layout Blueprint Modal */}
+                          <AnimatePresence>
+                            {showPdfPreviewModal && (
+                              <div key="pdf-preview-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-10">
+                                {/* Backdrop */}
+                                <motion.div
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  onClick={() => setShowPdfPreviewModal(false)}
+                                  className="fixed inset-0 bg-slate-950/85 backdrop-blur-md cursor-pointer"
+                                />
+
+                                {/* Modal Wrapper */}
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                                  transition={{ type: "spring", duration: 0.45, bounce: 0.2 }}
+                                  className="relative bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl text-white z-10"
+                                  id="pdf-preview-modal-content"
+                                >
+                                  {/* Header bar */}
+                                  <div className="flex items-center justify-between px-6 py-4.5 bg-zinc-900 border-b border-zinc-805">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="w-8 h-8 rounded-xl bg-orange-600/15 flex items-center justify-center text-orange-500 font-extrabold border border-orange-500/20">
+                                        <Eye className="w-4 h-4" />
+                                      </div>
+                                      <div>
+                                        <h3 className="font-extrabold text-xs uppercase tracking-wider text-white">Receipt Design Studio</h3>
+                                        <p className="text-[10px] text-zinc-400 font-medium tracking-tight">Active blueprint preview & structure audit</p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => setShowPdfPreviewModal(false)}
+                                      className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+
+                                  {/* Studio Content Panel: Grid split layout */}
+                                  <div className="flex-1 overflow-y-auto p-6 md:p-8 grid grid-cols-1 md:grid-cols-5 gap-8">
+                                    {/* Controls section (2 cols) */}
+                                    <div className="md:col-span-2 flex flex-col gap-5 justify-between">
+                                      <div className="space-y-4">
+                                        <div className="p-4 bg-zinc-950/60 border border-zinc-850 rounded-2xl">
+                                          <span className="text-[9px] uppercase tracking-widest font-black text-orange-500">FORMAT CONFIGURATION</span>
+                                          <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+                                            Real-time synchronization with download controls. Adjust print properties instantly.
+                                          </p>
+
+                                          {/* Property Toggles inside sidebar */}
+                                          <div className="mt-4 space-y-3">
+                                            {/* Layout Option */}
+                                            <div className="flex flex-col gap-1.5">
+                                              <label className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Page Format</label>
+                                              <div className="grid grid-cols-2 gap-2 bg-zinc-900 border border-zinc-800 p-1 rounded-xl">
+                                                <button
+                                                  onClick={() => setPdfLayoutFormat('a4')}
+                                                  className={`py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${pdfLayoutFormat === 'a4' ? 'bg-orange-600 text-white shadow' : 'text-zinc-400 hover:text-zinc-200'}`}
+                                                >
+                                                  A4 Paper
+                                                </button>
+                                                <button
+                                                  onClick={() => setPdfLayoutFormat('thermal')}
+                                                  className={`py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${pdfLayoutFormat === 'thermal' ? 'bg-orange-600 text-white shadow' : 'text-zinc-400 hover:text-zinc-200'}`}
+                                                >
+                                                  Thermal Roll
+                                                </button>
+                                              </div>
+                                            </div>
+
+                                            {/* QR Option */}
+                                            <div className="flex items-center justify-between bg-zinc-900/60 border border-zinc-850 p-2.5 rounded-xl">
+                                              <div>
+                                                <p className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Include QR Code</p>
+                                                <p className="text-[9px] text-zinc-500 leading-tight">Verification protocol gateway</p>
+                                              </div>
+                                              <button
+                                                onClick={() => setIncludeQrOnReceipt(prev => !prev)}
+                                                className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${includeQrOnReceipt ? 'bg-orange-600' : 'bg-zinc-800'}`}
+                                              >
+                                                <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${includeQrOnReceipt ? 'translate-x-3' : 'translate-x-0'}`} />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Layout Dimensions details specification */}
+                                        <div className="p-4 bg-zinc-950/60 border border-zinc-850 rounded-2xl text-xs space-y-3">
+                                          <span className="text-[9px] uppercase tracking-widest font-black text-zinc-500">SPECIFICATION DETAILS</span>
+                                          <div className="space-y-2 font-mono text-[10px] text-zinc-400 leading-tight">
+                                            <div className="flex justify-between border-b border-zinc-850/55 pb-1.5">
+                                              <span>Width:</span>
+                                              <span className="text-zinc-200 font-bold">{pdfLayoutFormat === 'a4' ? '210 mm (A4 letter)' : '80 mm (thermal docket)'}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-zinc-850/55 pb-1.5">
+                                              <span>Height:</span>
+                                              <span className="text-zinc-200 font-bold">{pdfLayoutFormat === 'a4' ? '297 mm' : `${Math.max(150, 115 + (order.items.length * 8) + (order.deliveryNote ? 15 : 0) + (includeQrOnReceipt ? 45 : 0))} mm (adaptive Roll)`}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-zinc-850/55 pb-1.5">
+                                              <span>Color Palette:</span>
+                                              <span className="text-zinc-200 font-bold">{pdfLayoutFormat === 'a4' ? 'RGB Slate Theme' : 'Monochrome 100%'}</span>
+                                            </div>
+                                            <div className="flex justify-between pb-0.5">
+                                              <span>Support QR:</span>
+                                              <span className={includeQrOnReceipt ? 'text-green-400 font-bold' : 'text-zinc-500'}>{includeQrOnReceipt ? 'GATEWAY_ON_DOCKET' : 'DISABLE_DOCKET_QR'}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Quick Action Button */}
+                                      <div className="pt-2">
+                                        <button
+                                          onClick={() => {
+                                            handleDownloadPdfReceipt(order);
+                                            setShowPdfPreviewModal(false);
+                                          }}
+                                          className="w-full bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white text-xs font-black py-3 rounded-xl transition shadow-lg shadow-orange-600/10 flex items-center justify-center gap-2 cursor-pointer"
+                                        >
+                                          <Download className="w-4 h-4" />
+                                          <span>GENERATE & PRINT PDF</span>
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Blueprint Draft / Mockup Container (3 cols) */}
+                                    <div className="md:col-span-3 flex flex-col items-center justify-center bg-zinc-950 rounded-3xl p-4 md:p-6 border border-zinc-850 min-h-[380px] relative overflow-hidden">
+                                      {/* Grid blueprint lines style */}
+                                      <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(#ffffff 2px, transparent 2px)', backgroundSize: '16px 16px' }}></div>
+                                      
+                                      {/* Real scale design mockup */}
+                                      <div className="w-full h-full flex items-center justify-center z-10 py-6">
+                                        {pdfLayoutFormat === 'a4' ? (
+                                          /* A4 Sheet Blueprint Representation */
+                                          <div className="w-full max-w-[218px] aspect-[1/1.414] bg-white text-zinc-850 rounded-sm shadow-xl p-3 border border-zinc-350 flex flex-col justify-between font-sans select-none relative overflow-hidden animate-fade-in">
+                                            {/* Beautiful diagonal faint watermark matching the printed PDF */}
+                                            <div className="absolute inset-0 flex flex-col justify-around items-center opacity-[0.05] select-none pointer-events-none z-0">
+                                              <span className="text-[26px] font-black tracking-widest text-[#ea580c] -rotate-[25deg] uppercase">FoodRush</span>
+                                              <span className="text-[26px] font-black tracking-widest text-[#ea580c] -rotate-[25deg] uppercase">FoodRush</span>
+                                            </div>
+
+                                            <div className="relative z-10 w-full flex flex-col justify-between h-full">
+                                              <div>
+                                                {/* Orange Top Accent Bar */}
+                                                <div className="h-1 bg-orange-500 -mx-3 -mt-3 mb-2.5 rounded-t-sm" />
+                                              
+                                              {/* Header bar area */}
+                                              <div className="flex justify-between items-start border-b border-zinc-150 pb-2 mb-2">
+                                                <div>
+                                                  {/* Monogram */}
+                                                  <div className="flex items-center gap-1">
+                                                    <span className="w-3.5 h-3.5 bg-slate-900 rounded-sm flex items-center justify-center text-[7px] text-white font-black">FR</span>
+                                                    <span className="text-[10px] uppercase font-black tracking-tight text-slate-900">FoodRush.</span>
+                                                  </div>
+                                                  <p className="text-[6px] text-zinc-400 mt-0.5 leading-tight font-medium">100 Pine Street, Seattle, WA</p>
+                                                </div>
+                                                <div className="text-right">
+                                                  <span className="text-[6px] bg-zinc-100 text-zinc-650 px-1 py-0.5 rounded font-bold uppercase tracking-wider">OFFICIAL INVOICE</span>
+                                                  <p className="text-[5px] text-zinc-450 mt-1 font-bold"># {order.id.slice(0, 8).toUpperCase()}</p>
+                                                </div>
+                                              </div>
+
+                                              {/* Metadata grids */}
+                                              <div className="grid grid-cols-2 gap-2 text-[6px] border-b border-zinc-150 pb-2 mb-2 font-medium">
+                                                <div>
+                                                  <p className="text-zinc-400 font-bold uppercase text-[5px]">Customer Details</p>
+                                                  <p className="font-extrabold text-zinc-800 mt-0.5">{order.customerName}</p>
+                                                  <p className="text-zinc-500 truncate max-w-[90px]">{order.customerAddress}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                  <p className="text-zinc-400 font-bold uppercase text-[5px]">Order & Logistics</p>
+                                                  <p className="font-extrabold text-zinc-800 mt-0.5">Shop: {order.restaurantName}</p>
+                                                  <p className="text-zinc-500">Method: {order.paymentMethod.toUpperCase()}</p>
+                                                </div>
+                                              </div>
+
+                                              {/* Items table list mockup */}
+                                              <div className="space-y-1.5">
+                                                <div className="flex justify-between text-[5px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 pb-1">
+                                                  <span>Description</span>
+                                                  <div className="flex gap-4">
+                                                    <span>Qty</span>
+                                                    <span>Price</span>
+                                                  </div>
+                                                </div>
+                                                <div className="space-y-1 max-h-[85px] overflow-y-auto">
+                                                  {order.items.map((item, idx) => (
+                                                    <div key={idx} className="flex justify-between text-[6px] text-zinc-750 font-semibold">
+                                                      <span className="truncate max-w-[100px]">{item.name}</span>
+                                                      <div className="flex gap-5 font-mono">
+                                                        <span>x{item.quantity}</span>
+                                                        <span className="w-10 text-right">${(item.price * item.quantity).toFixed(2)}</span>
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            {/* Verification QR Code and footer */}
+                                            <div className="border-t border-zinc-150 pt-2.5 mt-auto">
+                                              <div className="flex items-center gap-2 justify-between">
+                                                {includeQrOnReceipt && qrCodePreviewDataUrl ? (
+                                                  <div className="flex items-center gap-2 max-w-[120px]">
+                                                    <div className="p-0.5 border border-orange-200 bg-orange-50 rounded-md">
+                                                      <img src={qrCodePreviewDataUrl} alt="Receipt verification QR code" className="w-[28px] h-[28px]" referrerPolicy="no-referrer" />
+                                                    </div>
+                                                    <div>
+                                                      <p className="text-[5px] font-black text-orange-600 uppercase tracking-widest">GATEWAY CODE</p>
+                                                      <p className="text-[4px] text-zinc-450 leading-tight">Scan help code to verify routing in logistics terminal.</p>
+                                                    </div>
+                                                  </div>
+                                                ) : (
+                                                  <p className="text-[4px] text-zinc-400 leading-tight max-w-[120px]">This document has been compiled and is active proof of transaction clearance.</p>
+                                                )}
+                                                
+                                                {/* Summary box */}
+                                                <div className="text-right min-w-[50px] space-y-0.5">
+                                                  <div className="flex justify-between text-[5px] text-zinc-400 font-semibold">
+                                                    <span>Subtotal:</span>
+                                                    <span>${(order.total - 3.99).toFixed(2)}</span>
+                                                  </div>
+                                                  <div className="flex justify-between text-[5px] text-zinc-400 font-semibold">
+                                                    <span>Delivery:</span>
+                                                    <span>$3.99</span>
+                                                  </div>
+                                                  <div className="flex justify-between text-[7px] text-slate-900 font-black pt-1 border-t border-zinc-150">
+                                                    <span>TOTAL:</span>
+                                                    <span>${order.total.toFixed(2)}</span>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              
+                                              <p className="text-center text-[4px] text-zinc-300 font-mono mt-1 pt-1 border-t border-zinc-100 select-none">
+                                                Thank you for your order with FoodRush. All services rendered.
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        ) : (
+                                          /* Thermal Scroll Docket Representation */
+                                          <div className="w-[110px] aspect-[1/2.2] bg-white text-zinc-800 rounded-sm shadow-xl p-2.5 border-l border-r border-dashed border-zinc-300 flex flex-col justify-between font-mono text-[5px] select-none relative overflow-hidden animate-fade-in">
+                                            {/* Beautiful diagonal faint watermark matching the printed Thermal PDF */}
+                                            <div className="absolute inset-x-0 inset-y-4 flex flex-col justify-around items-center opacity-[0.05] select-none pointer-events-none z-0">
+                                              <span className="text-[10px] font-black tracking-wider text-slate-800 -rotate-[25deg] uppercase">FoodRush</span>
+                                              <span className="text-[10px] font-black tracking-wider text-slate-800 -rotate-[25deg] uppercase">FoodRush</span>
+                                              <span className="text-[10px] font-black tracking-wider text-slate-800 -rotate-[25deg] uppercase">FoodRush</span>
+                                            </div>
+
+                                            <div className="relative z-10 w-full flex flex-col justify-between h-full">
+                                              <div className="text-center space-y-1">
+                                              {/* Tear line mimics top */}
+                                              <div className="absolute top-1 left-0 right-0 flex justify-between px-1 opacity-20 text-zinc-650">
+                                                <span>•</span><span>•</span><span>•</span><span>•</span><span>•</span><span>•</span><span>•</span><span>•</span><span>•</span>
+                                              </div>
+                                              
+                                              {/* FR Badge Monogram */}
+                                              <div className="inline-flex w-3.5 h-3.5 bg-slate-900 rounded-full items-center justify-center text-[6px] text-white font-bold mx-auto mt-1 mb-1">
+                                                FR
+                                              </div>
+                                              <p className="font-extrabold uppercase text-[7px] tracking-widest text-slate-900">FoodRush Ltd</p>
+                                              <p className="text-[4px] text-zinc-400">Merchant Terminal #F581</p>
+                                              <p className="text-[4px] text-zinc-450">100 Pine Street, Seattle, WA</p>
+                                              
+                                              {/* Separator */}
+                                              <div className="border-t border-dashed border-zinc-205 my-1 pb-1" />
+                                              
+                                              {/* Key Details */}
+                                              <div className="text-left space-y-0.5 pl-0.5">
+                                                <p className="font-bold">INVOICE: #{order.id.slice(0, 8).toUpperCase()}</p>
+                                                <p className="text-zinc-500">DATE: {new Date().toLocaleDateString()}</p>
+                                                <p className="text-zinc-500">CLIENT: {order.customerName}</p>
+                                                <p className="text-zinc-500 truncate max-w-[90px]">SHOP: {order.restaurantName}</p>
+                                              </div>
+
+                                              {/* Separator */}
+                                              <div className="border-t border-dashed border-zinc-205 my-1 pb-1" />
+
+                                              {/* Items table list simple */}
+                                              <div className="space-y-1 text-left pl-0.5">
+                                                {order.items.map((item, idx) => (
+                                                  <div key={idx} className="flex justify-between text-zinc-700 leading-tight">
+                                                    <span className="truncate max-w-[55px] font-bold">{item.name}</span>
+                                                    <span className="font-bold">x{item.quantity}</span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+
+                                            {/* Pricing double-line section */}
+                                            <div className="mt-auto space-y-1 text-center">
+                                              <div className="border-t border-dashed border-zinc-205 my-1 pb-1" />
+                                              
+                                              <div className="space-y-0.5 pl-0.5 text-left text-zinc-650">
+                                                <div className="flex justify-between">
+                                                  <span>SUBTOTAL:</span>
+                                                  <span>${(order.total - 3.99).toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                  <span>DELIV FEE:</span>
+                                                  <span>$3.99</span>
+                                                </div>
+                                                <div className="flex justify-between text-[6px] font-black text-slate-900 pt-0.5 border-t border-dashed border-zinc-205">
+                                                  <span>TOTAL:</span>
+                                                  <span>${order.total.toFixed(2)}</span>
+                                                </div>
+                                              </div>
+                                              
+                                              <p className="text-zinc-400 text-[4px] uppercase mt-1">METHOD: {order.paymentMethod.toUpperCase()}</p>
+
+                                              {/* Validation Gateway QR inside thermal */}
+                                              {includeQrOnReceipt && qrCodePreviewDataUrl ? (
+                                                <div className="flex flex-col items-center mt-2.5">
+                                                  <div className="border border-zinc-300 p-0.5 rounded bg-white">
+                                                    <img src={qrCodePreviewDataUrl} alt="Support QR code representation" className="w-[28px] h-[28px]" referrerPolicy="no-referrer" />
+                                                  </div>
+                                                  <p className="text-[3.5px] text-zinc-450 mt-1 uppercase font-bold tracking-wider">GATEWAY SCAN CODE</p>
+                                                </div>
+                                              ) : (
+                                                <p className="text-[3px] text-zinc-450 mt-1 select-none">Receipt printed electronically.</p>
+                                              )}
+                                              
+                                              <p className="text-[4px] text-zinc-400 font-extrabold mt-2 font-mono">
+                                                *** THANK YOU FOR ORDERING ***
+                                              </p>
+
+                                              {/* Tear line mimics bottom */}
+                                              <div className="pt-1.5 flex justify-between px-1 opacity-20 text-zinc-650">
+                                                <span>•</span><span>•</span><span>•</span><span>•</span><span>•</span><span>•</span><span>•</span><span>•</span><span>•</span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        )}
+                                      </div>
+
+                                      {/* Hover overlay description */}
+                                      <div className="absolute bottom-3 left-3 right-3 bg-zinc-900/95 border border-zinc-800 rounded-xl px-3 py-2 text-center shadow-lg">
+                                        <p className="text-[9px] text-zinc-400 leading-tight font-medium font-sans">
+                                          💡 Adjust formats and QR toggle. Download in the workspace to output this document directly.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              </div>
+                            )}
+                          </AnimatePresence>
+                        </>
                       );
                     })()}
                   </div>
