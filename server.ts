@@ -1206,6 +1206,18 @@ app.patch(['/api/riders/:id', '/riders/:id'], (req: Request, res: Response) => {
     res.status(404).json({ error: 'Rider not found' });
     return;
   }
+  if (req.body.name) {
+    rider.name = req.body.name;
+  }
+  if (req.body.phone) {
+    rider.phone = req.body.phone;
+  }
+  if (req.body.vehicle) {
+    rider.vehicle = req.body.vehicle;
+  }
+  if (req.body.plateNumber) {
+    rider.plateNumber = req.body.plateNumber;
+  }
   if (req.body.location) {
     rider.location = req.body.location;
   }
@@ -1213,6 +1225,44 @@ app.patch(['/api/riders/:id', '/riders/:id'], (req: Request, res: Response) => {
     rider.status = req.body.status;
   }
   res.json(rider);
+});
+
+// Restaurant Profile Patch Endpoint
+app.patch(['/api/restaurants/:id', '/restaurants/:id'], (req: Request, res: Response) => {
+  const rest = INITIAL_RESTAURANTS.find(r => r.id === req.params.id);
+  if (!rest) {
+    res.status(404).json({ error: 'Restaurant not found' });
+    return;
+  }
+  if (req.body.name) {
+    rest.name = req.body.name;
+  }
+  if (req.body.phoneNumber) {
+    rest.phoneNumber = req.body.phoneNumber;
+  }
+  if (req.body.address) {
+    rest.address = req.body.address;
+  }
+  if (req.body.cuisine) {
+    if (Array.isArray(req.body.cuisine)) {
+      rest.cuisine = req.body.cuisine;
+    } else if (typeof req.body.cuisine === 'string') {
+      rest.cuisine = req.body.cuisine.split(',').map((c: string) => c.trim()).filter(Boolean);
+    }
+  }
+  if (req.body.hours) {
+    rest.hours = req.body.hours;
+  }
+  if (req.body.deliveryFee !== undefined) {
+    rest.deliveryFee = parseFloat(req.body.deliveryFee) || 0;
+  }
+  if (req.body.minOrder !== undefined) {
+    rest.minOrder = parseFloat(req.body.minOrder) || 0;
+  }
+  if (req.body.isOpen !== undefined) {
+    rest.isOpen = !!req.body.isOpen;
+  }
+  res.json(rest);
 });
 
 // 5. Platform Analytics Endpoint

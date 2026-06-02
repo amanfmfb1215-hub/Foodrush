@@ -428,44 +428,86 @@ export default function App() {
   const [selectedBank, setSelectedBank] = useState<string>('');
   const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
 
+  // Restaurant Partner selected workspace
+  const [partnerRestId, setPartnerRestId] = useState<string>('rest-1');
+
   // User Profile state
   const [profileOpen, setProfileOpen] = useState<boolean>(false);
+  const [activeProfileTab, setActiveProfileTab] = useState<'customer' | 'restaurant' | 'rider' | 'admin'>('customer');
   const [profileForm, setProfileForm] = useState({
+    // Customer
     name: '',
     phone: '',
     address: '',
-    vehicle: 'Motorcycle',
-    restaurantName: 'My Restaurant',
-    cuisine: 'American',
-    department: 'Super Admin'
+    // Restaurant
+    restaurantId: 'rest-1',
+    restaurantName: 'BurgerBite Co.',
+    restaurantPhone: '+1 (555) 123-4567',
+    restaurantAddress: '142 Gourmet Avenue, Food City',
+    cuisine: 'Burgers, Fast Food, Sides',
+    restaurantHours: '11:00 AM - 11:00 PM',
+    restaurantMinOrder: 10,
+    restaurantDeliveryFee: 1.99,
+    // Rider
+    riderId: 'rider-1',
+    riderName: 'Zack Walker',
+    riderPhone: '+1 (555) 234-5678',
+    vehicle: 'Electric Bicycle',
+    riderPlate: 'E-BIKE-332D',
+    // Admin
+    department: 'Super Admin',
+    adminLevel: 'Level 5 Master'
   });
 
   useEffect(() => {
     if (profileOpen && userSession) {
-      let safeVehicle = 'Motorcycle';
-      let safeRestName = 'My Restaurant';
-      let safeCuisine = 'American';
-      let safeDept = 'Super Admin';
-      try {
-        safeVehicle = safeStorage.getItem('foodrush_rider_vehicle') || 'Motorcycle';
-        safeRestName = safeStorage.getItem('foodrush_rest_name') || 'My Restaurant';
-        safeCuisine = safeStorage.getItem('foodrush_rest_cuisine') || 'American';
-        safeDept = safeStorage.getItem('foodrush_admin_dept') || 'Super Admin';
-      } catch (e) {
-        // ignore
-      }
+      setActiveProfileTab(currentRole);
+      const defaultRestId = partnerRestId || 'rest-1';
+      const defaultRest = restaurants.find(r => r.id === defaultRestId) || restaurants[0] || {
+        id: 'rest-1',
+        name: 'BurgerBite Co.',
+        phoneNumber: '+1 (555) 123-4567',
+        address: '142 Gourmet Avenue, Food City',
+        cuisine: ['Burgers', 'Fast Food', 'Sides'],
+        hours: '11:00 AM - 11:00 PM',
+        minOrder: 10,
+        deliveryFee: 1.99
+      };
+
+      const defaultRiderId = 'rider-1';
+      const defaultRider = riders.find(r => r.id === defaultRiderId) || riders[0] || {
+        id: 'rider-1',
+        name: 'Zack Walker',
+        phone: '+1 (555) 234-5678',
+        vehicle: 'Electric Bicycle',
+        plateNumber: 'E-BIKE-332D'
+      };
+
       setProfileForm({
-        ...profileForm,
         name: userSession.name || '',
-        phone: checkoutPhone,
-        address: checkoutAddress,
-        vehicle: safeVehicle,
-        restaurantName: safeRestName,
-        cuisine: safeCuisine,
-        department: safeDept
+        phone: checkoutPhone || '',
+        address: checkoutAddress || '',
+        
+        restaurantId: defaultRest.id,
+        restaurantName: defaultRest.name || '',
+        restaurantPhone: defaultRest.phoneNumber || '',
+        restaurantAddress: defaultRest.address || '',
+        cuisine: Array.isArray(defaultRest.cuisine) ? defaultRest.cuisine.join(', ') : (defaultRest.cuisine || ''),
+        restaurantHours: defaultRest.hours || '11:00 AM - 11:00 PM',
+        restaurantMinOrder: defaultRest.minOrder || 10,
+        restaurantDeliveryFee: defaultRest.deliveryFee || 1.99,
+
+        riderId: defaultRider.id,
+        riderName: defaultRider.name || '',
+        riderPhone: defaultRider.phone || '',
+        vehicle: defaultRider.vehicle || '',
+        riderPlate: defaultRider.plateNumber || '',
+
+        department: safeStorage.getItem('foodrush_admin_dept') || 'Super Admin',
+        adminLevel: safeStorage.getItem('foodrush_admin_level') || 'Level 5 Master'
       });
     }
-  }, [profileOpen]);
+  }, [profileOpen, partnerRestId, restaurants, riders, userSession, checkoutPhone, checkoutAddress]);
 
   // AI & Chatbots state
   const [chatbotOpen, setChatbotOpen] = useState<boolean>(false);
@@ -487,7 +529,6 @@ export default function App() {
   const [selectedAdminTab, setSelectedAdminTab] = useState<'restaurants' | 'live-orders' | 'analytics'>('analytics');
 
   // Restaurant Partner selected workspace
-  const [partnerRestId, setPartnerRestId] = useState<string>('rest-1');
   const [newFoodName, setNewFoodName] = useState<string>('');
   const [newFoodPrice, setNewFoodPrice] = useState<string>('');
   const [newFoodDesc, setNewFoodDesc] = useState<string>('');
@@ -4384,38 +4425,98 @@ export default function App() {
           ========================================== */}
       {profileOpen && userSession && (
         <div className="fixed inset-0 z-[100] bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl animate-in slide-in-from-bottom-4 fade-in">
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-3">
-                <div className="bg-orange-100 p-2 rounded-2xl">
-                  <User className="w-5 h-5 text-orange-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-slate-900 capitalize">{currentRole} Profile</h3>
-                  <p className="text-xs text-zinc-500 font-medium">{userSession.email}</p>
-                </div>
-              </div>
-              <button onClick={() => setProfileOpen(false)} className="p-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded-full transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl animate-in slide-in-from-bottom-4 fade-in max-h-[90vh] flex flex-col justify-between">
             
-            <div className="flex flex-col gap-4 mb-6">
-              <div>
-                <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Full Name</label>
-                <input
-                  type="text"
-                  value={profileForm.name}
-                  onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
-                  placeholder="Your Name"
-                />
+            {/* Modal Header */}
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-orange-100 p-2 rounded-2xl">
+                    <User className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900">Workspace Profiles</h3>
+                    <p className="text-xs text-zinc-500 font-semibold">{userSession.email}</p>
+                  </div>
+                </div>
+                <button onClick={() => setProfileOpen(false)} className="p-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded-full transition-colors cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              {currentRole === 'customer' && (
-                <>
+              {/* Gorgeous Tabbed Selector */}
+              <div className="grid grid-cols-4 gap-1 p-1 bg-zinc-100 rounded-2xl mb-5">
+                {[
+                  { id: 'customer', label: 'Diner', icon: Compass },
+                  { id: 'restaurant', label: 'Merchant', icon: ChefHat },
+                  { id: 'rider', label: 'Courier', icon: Bike },
+                  { id: 'admin', label: 'Admin', icon: Building },
+                ].map((tab) => {
+                  const IconComp = tab.icon;
+                  const isActive = activeProfileTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveProfileTab(tab.id as 'customer' | 'restaurant' | 'rider' | 'admin')}
+                      className={`py-2 px-1 rounded-xl font-black text-[10px] flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-all outline-none cursor-pointer ${
+                        isActive
+                          ? 'bg-white text-orange-600 shadow-sm'
+                          : 'text-zinc-500 hover:text-zinc-800'
+                      }`}
+                    >
+                      <IconComp className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden sm:inline">{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Scrollable Form Content */}
+            <div className="flex-1 overflow-y-auto pr-1 mb-5 space-y-4">
+              
+              {/* CURRENT ACTIVE ROLE BADGE OVERVIEW */}
+              <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                  <span className="text-xs font-bold text-zinc-600">Editing Settings:</span>
+                  <span className="text-xs font-black uppercase text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100">
+                    {activeProfileTab} Mode
+                  </span>
+                </div>
+                {currentRole === activeProfileTab && (
+                  <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 animate-pulse">
+                    Active Session Role
+                  </span>
+                )}
+              </div>
+
+              {/* ==================================== */}
+              {/* TAB 1: DINER (CUSTOMER) PROFILE     */}
+              {/* ==================================== */}
+              {activeProfileTab === 'customer' && (
+                <div className="space-y-4 animate-fade-in text-left">
                   <div>
-                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Phone Number</label>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Customer Full Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.name}
+                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="Diner Name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">GMail (Read Only)</label>
+                    <input
+                      type="email"
+                      disabled
+                      value={userSession.email}
+                      className="w-full bg-zinc-100/80 border border-zinc-200 text-zinc-450 rounded-xl px-4 py-3 text-sm font-semibold outline-none cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Interactive Call Number</label>
                     <input
                       type="text"
                       value={profileForm.phone}
@@ -4431,108 +4532,374 @@ export default function App() {
                       value={profileForm.address}
                       onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
                       className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
-                      placeholder="Street, City, Apartment"
+                      placeholder="Address location"
                     />
                   </div>
-                </>
-              )}
 
-              {currentRole === 'rider' && (
-                <div>
-                  <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Vehicle Type</label>
-                  <input
-                    type="text"
-                    value={profileForm.vehicle}
-                    onChange={(e) => setProfileForm({ ...profileForm, vehicle: e.target.value })}
-                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
-                    placeholder="E.g. Motorcycle, Bicycle, Car"
-                  />
+                  <button
+                    onClick={() => {
+                      const newSession = { ...userSession, name: profileForm.name || userSession.name };
+                      setUserSession(newSession);
+                      safeStorage.setItem('foodrush_session2', JSON.stringify(newSession));
+                      
+                      setCheckoutPhone(profileForm.phone);
+                      setCheckoutAddress(profileForm.address);
+                      safeStorage.setItem('foodrush_phone', profileForm.phone);
+                      safeStorage.setItem('foodrush_address', profileForm.address);
+                      
+                      setProfileOpen(false);
+                      addToast('Customer Profile Saved', 'Diner contacts & dropoff coordinates adjusted successfully.', <CheckCircle className="w-5 h-5 text-green-600" />);
+                    }}
+                    className="w-full py-3.5 px-4 rounded-xl font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-600/20 transition-all text-xs cursor-pointer mt-2"
+                  >
+                    Save Diner Profile Settings
+                  </button>
                 </div>
               )}
 
-              {currentRole === 'restaurant' && (
-                <>
+              {/* ==================================== */}
+              {/* TAB 2: RESTAURANT MERCHANT PROFILE  */}
+              {/* ==================================== */}
+              {activeProfileTab === 'restaurant' && (
+                <div className="space-y-4 animate-fade-in text-left">
+                  {/* Store Selector */}
                   <div>
-                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Restaurant Name</label>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Select Active Restaurant Shop</label>
+                    <select
+                      value={profileForm.restaurantId}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const selectedRest = restaurants.find(r => r.id === selectedId);
+                        if (selectedRest) {
+                          setProfileForm({
+                            ...profileForm,
+                            restaurantId: selectedId,
+                            restaurantName: selectedRest.name,
+                            restaurantPhone: selectedRest.phoneNumber || '',
+                            restaurantAddress: selectedRest.address || '',
+                            cuisine: Array.isArray(selectedRest.cuisine) ? selectedRest.cuisine.join(', ') : (selectedRest.cuisine || ''),
+                            restaurantHours: selectedRest.hours || '11:00 AM - 11:00 PM',
+                            restaurantMinOrder: selectedRest.minOrder || 10,
+                            restaurantDeliveryFee: selectedRest.deliveryFee || 1.99
+                          });
+                        }
+                      }}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all cursor-pointer"
+                    >
+                      {restaurants.map(r => (
+                        <option key={r.id} value={r.id}>🏠 {r.name} ({r.cuisine?.[0] || 'Food'})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Restaurant Operational Name</label>
                     <input
                       type="text"
                       value={profileForm.restaurantName}
                       onChange={(e) => setProfileForm({ ...profileForm, restaurantName: e.target.value })}
                       className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
-                      placeholder="Restaurant Name"
+                      placeholder="My Gourmet Eatery"
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Store Phone</label>
+                      <input
+                        type="text"
+                        value={profileForm.restaurantPhone}
+                        onChange={(e) => setProfileForm({ ...profileForm, restaurantPhone: e.target.value })}
+                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-xs font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                        placeholder="+1 (555) 000-0000"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Kitchen Hours</label>
+                      <input
+                        type="text"
+                        value={profileForm.restaurantHours}
+                        onChange={(e) => setProfileForm({ ...profileForm, restaurantHours: e.target.value })}
+                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-xs font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                        placeholder="10:00 AM - 10:00 PM"
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Cuisine Type</label>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Culinary Cuisine Categories</label>
                     <input
                       type="text"
                       value={profileForm.cuisine}
                       onChange={(e) => setProfileForm({ ...profileForm, cuisine: e.target.value })}
                       className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
-                      placeholder="E.g. Italian, Fast Food"
+                      placeholder="Italian, Burgers, Dessert..."
                     />
                   </div>
-                </>
-              )}
 
-              {currentRole === 'admin' && (
-                <div>
-                  <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Department</label>
-                  <input
-                    type="text"
-                    value={profileForm.department}
-                    onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
-                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
-                    placeholder="Department"
-                  />
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Base Restaurant Location</label>
+                    <input
+                      type="text"
+                      value={profileForm.restaurantAddress}
+                      onChange={(e) => setProfileForm({ ...profileForm, restaurantAddress: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="1 Main Food Street"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Min Order ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={profileForm.restaurantMinOrder}
+                        onChange={(e) => setProfileForm({ ...profileForm, restaurantMinOrder: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-xs font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Base Delivery Fee ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={profileForm.restaurantDeliveryFee}
+                        onChange={(e) => setProfileForm({ ...profileForm, restaurantDeliveryFee: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-xs font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/api/restaurants/${profileForm.restaurantId}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            name: profileForm.restaurantName,
+                            phoneNumber: profileForm.restaurantPhone,
+                            address: profileForm.restaurantAddress,
+                            cuisine: profileForm.cuisine,
+                            hours: profileForm.restaurantHours,
+                            deliveryFee: profileForm.restaurantDeliveryFee,
+                            minOrder: profileForm.restaurantMinOrder
+                          })
+                        });
+                        
+                        if (res.ok) {
+                          safeStorage.setItem('foodrush_rest_name', profileForm.restaurantName);
+                          safeStorage.setItem('foodrush_rest_cuisine', profileForm.cuisine);
+                          await silentSyncData();
+                          setProfileOpen(false);
+                          addToast('Restaurant Profile Updated', `Merchant details for "${profileForm.restaurantName}" updated successfully on server.`, <CheckCircle className="w-5 h-5 text-green-600" />);
+                        } else {
+                          throw new Error('Save server rejection');
+                        }
+                      } catch (err) {
+                        console.error('Failed to sync restaurant merchant settings', err);
+                        addToast('Update Failed', 'Failed to save merchant settings to the backend container.', <X className="w-5 h-5 text-red-650" />);
+                      }
+                    }}
+                    className="w-full py-3.5 px-4 rounded-xl font-bold bg-[#111111] hover:bg-zinc-800 text-white shadow-md transition-all text-xs cursor-pointer mt-2"
+                  >
+                    Save Merchant Restaurant Profile
+                  </button>
                 </div>
               )}
+
+              {/* ==================================== */}
+              {/* TAB 3: DELIVERY RIDER PROFILE        */}
+              {/* ==================================== */}
+              {activeProfileTab === 'rider' && (
+                <div className="space-y-4 animate-fade-in text-left">
+                  {/* Rider Selector */}
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Choose Courier Account</label>
+                    <select
+                      value={profileForm.riderId}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const selectedRider = riders.find(r => r.id === selectedId);
+                        if (selectedRider) {
+                          setProfileForm({
+                            ...profileForm,
+                            riderId: selectedId,
+                            riderName: selectedRider.name,
+                            riderPhone: selectedRider.phone || '',
+                            vehicle: selectedRider.vehicle || '',
+                            riderPlate: selectedRider.plateNumber || ''
+                          });
+                        }
+                      }}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all cursor-pointer"
+                    >
+                      {riders.map(rd => (
+                        <option key={rd.id} value={rd.id}>🏍️ {rd.name} ({rd.vehicle || 'Bike'})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Rider Public Display Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.riderName}
+                      onChange={(e) => setProfileForm({ ...profileForm, riderName: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="Courier Name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Rider Dispatch Contact</label>
+                    <input
+                      type="text"
+                      value={profileForm.riderPhone}
+                      onChange={(e) => setProfileForm({ ...profileForm, riderPhone: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Vehicle Class</label>
+                      <input
+                        type="text"
+                        value={profileForm.vehicle}
+                        onChange={(e) => setProfileForm({ ...profileForm, vehicle: e.target.value })}
+                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-xs font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                        placeholder="Motorcycle, Electric Bicycle"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Plate Number</label>
+                      <input
+                        type="text"
+                        value={profileForm.riderPlate}
+                        onChange={(e) => setProfileForm({ ...profileForm, riderPlate: e.target.value })}
+                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-xs font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                        placeholder="R-BIKE-321D"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/api/riders/${profileForm.riderId}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            name: profileForm.riderName,
+                            phone: profileForm.riderPhone,
+                            vehicle: profileForm.vehicle,
+                            plateNumber: profileForm.riderPlate
+                          })
+                        });
+                        
+                        if (res.ok) {
+                          safeStorage.setItem('foodrush_rider_vehicle', profileForm.vehicle);
+                          if (userSession.role === 'rider' && profileForm.riderId === 'rider-1') {
+                            const newSession = { ...userSession, name: profileForm.riderName };
+                            setUserSession(newSession);
+                            safeStorage.setItem('foodrush_session2', JSON.stringify(newSession));
+                          }
+                          await silentSyncData();
+                          setProfileOpen(false);
+                          addToast('Rider Profile Saved', `Courier details for "${profileForm.riderName}" saved successfully.`, <CheckCircle className="w-5 h-5 text-green-600" />);
+                        } else {
+                          throw new Error('Save status rejections');
+                        }
+                      } catch (err) {
+                        console.error('Failed to sync rider settings to backend', err);
+                        addToast('Update Failed', 'Could not sync courier details to server.', <X className="w-5 h-5 text-red-650" />);
+                      }
+                    }}
+                    className="w-full py-3.5 px-4 rounded-xl font-bold bg-[#0d592f] hover:bg-[#073c1d] text-white shadow-md transition-all text-xs cursor-pointer mt-2"
+                  >
+                    Save Dispatch Rider Courier Profile
+                  </button>
+                </div>
+              )}
+
+              {/* ==================================== */}
+              {/* TAB 4: SUPER ADMIN COCKPIT           */}
+              {/* ==================================== */}
+              {activeProfileTab === 'admin' && (
+                <div className="space-y-4 animate-fade-in text-left">
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Admin Display Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.name}
+                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="Your Name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Core Desk / Department</label>
+                    <input
+                      type="text"
+                      value={profileForm.department}
+                      onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="Super Operations Admin"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Administrative Privilege Rank</label>
+                    <input
+                      type="text"
+                      value={profileForm.adminLevel}
+                      onChange={(e) => setProfileForm({ ...profileForm, adminLevel: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="Level 5 Master Privileges"
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const newSession = { ...userSession, name: profileForm.name || userSession.name };
+                      setUserSession(newSession);
+                      safeStorage.setItem('foodrush_session2', JSON.stringify(newSession));
+                      
+                      safeStorage.setItem('foodrush_admin_dept', profileForm.department);
+                      safeStorage.setItem('foodrush_admin_level', profileForm.adminLevel);
+                      
+                      setProfileOpen(false);
+                      addToast('Super Admin Dashboard Updated', 'Administration cockpit credentials configured successfully.', <CheckCircle className="w-5 h-5 text-green-600" />);
+                    }}
+                    className="w-full py-3.5 px-4 rounded-xl font-bold bg-[#e05638] hover:bg-[#b53a20] text-white shadow-md transition-all text-xs cursor-pointer mt-2"
+                  >
+                    Save Operational Admin Cockpit Profile
+                  </button>
+                </div>
+              )}
+
             </div>
 
-            <div className="flex flex-col gap-3">
+            {/* Modal Actions (Bottom) */}
+            <div className="pt-3 border-t border-zinc-150 flex flex-col gap-2">
               <button 
                 onClick={() => {
-                  const newSession = { ...userSession, name: profileForm.name || userSession.name };
-                  setUserSession(newSession);
-                  safeStorage.setItem('foodrush_session2', JSON.stringify(newSession));
-                  
-                  if (currentRole === 'customer') {
-                    setCheckoutPhone(profileForm.phone);
-                    setCheckoutAddress(profileForm.address);
-                    safeStorage.setItem('foodrush_phone', profileForm.phone);
-                    safeStorage.setItem('foodrush_address', profileForm.address);
-                  } else if (currentRole === 'rider') {
-                    safeStorage.setItem('foodrush_rider_vehicle', profileForm.vehicle);
-                  } else if (currentRole === 'restaurant') {
-                    safeStorage.setItem('foodrush_rest_name', profileForm.restaurantName);
-                    safeStorage.setItem('foodrush_rest_cuisine', profileForm.cuisine);
-                  } else if (currentRole === 'admin') {
-                    safeStorage.setItem('foodrush_admin_dept', profileForm.department);
-                  }
-                  
-                  setProfileOpen(false);
-                  addToast('Profile Updated', 'Your profile details have been saved successfully.', <CheckCircle className="w-5 h-5 text-green-600" />);
-                }}
-                className="w-full py-3 px-4 rounded-xl font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-600/20 transition-all text-sm"
-              >
-                Save Changes
-              </button>
-              
-              <button 
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                  if (window.confirm('Are you sure you want to log out & clear Google Auth coordinates? This cannot be undone.')) {
                     safeStorage.removeItem('foodrush_session2');
                     setUserSession(null);
                     setProfileOpen(false);
                     setCurrentRole('customer');
                   }
                 }}
-                className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl font-bold bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 transition-all text-sm"
+                className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-2xl font-bold bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 transition-all text-xs cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
-                Delete Account
+                Logout & Clear Sandbox Account
               </button>
             </div>
+
           </div>
         </div>
       )}
