@@ -45,7 +45,8 @@ import {
   Phone,
   Flame,
   Package,
-  Utensils
+  Utensils,
+  Download
 } from 'lucide-react';
 import { MenuItem, Restaurant, Order, OrderStatus, ChatMessage, Rider, PlatformAnalytics, Review, OrderItem } from './types';
 import AppFooter from './components/AppFooter';
@@ -56,7 +57,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { STATIC_FALLBACK_RESTAURANTS, STATIC_FALLBACK_RIDERS, STATIC_FALLBACK_ANALYTICS } from './fallbackData';
 
 const API_KEY =
-  process.env.GOOGLE_MAPS_PLATFORM_KEY ||
+  (typeof process !== 'undefined' && process.env?.GOOGLE_MAPS_PLATFORM_KEY) ||
   (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
   (globalThis as any).GOOGLE_MAPS_PLATFORM_KEY ||
   '';
@@ -247,6 +248,13 @@ const RiderMarkerWithInfoWindow = ({
   );
 };
 
+
+const safeStorage = {
+  getItem: (k: string) => { try { return window.localStorage.getItem(k); } catch { return null; } },
+  setItem: (k: string, v: string) => { try { window.localStorage.setItem(k, v); } catch {} },
+  removeItem: (k: string) => { try { window.localStorage.removeItem(k); } catch {} }
+};
+
 export default function App() {
   // Authenticated user session with Google Auth
   const [userSession, setUserSession] = useState<{
@@ -256,7 +264,7 @@ export default function App() {
     role: 'customer' | 'restaurant' | 'rider' | 'admin';
   } | null>(() => {
     try {
-      const cached = localStorage.getItem('foodrush_session2');
+      const cached = safeStorage.getItem('foodrush_session2');
       return cached ? JSON.parse(cached) : null;
     } catch {
       return null;
@@ -266,7 +274,7 @@ export default function App() {
   // Roles toggle: Customer, Restaurant, Rider, Admin (respects local preferences)
   const [currentRole, setCurrentRole] = useState<'customer' | 'restaurant' | 'rider' | 'admin'>(() => {
     try {
-      const cached = localStorage.getItem('foodrush_session2');
+      const cached = safeStorage.getItem('foodrush_session2');
       if (cached) {
         return JSON.parse(cached).role;
       }
@@ -301,17 +309,86 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  // System toasts
+  const [toasts, setToasts] = useState<{ id: string; title: string; message: string; icon?: React.ReactNode }[]>([]);
+  const prevOrdersRef = useRef<Order[]>([]);
+
+  const addToast = (title: string, message: string, icon?: React.ReactNode) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, title, message, icon }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 6000); // give it a few seconds
+  };
+
+  useEffect(() => {
+    // Check for 'preparing' to 'ready' status changes
+    if (currentRole === 'customer') {
+      orders.forEach(currentOrder => {
+        const previousOrder = prevOrdersRef.current.find(o => o.id === currentOrder.id);
+        if (previousOrder && previousOrder.status === 'preparing' && currentOrder.status === 'ready') {
+          addToast(
+            'Order is Ready!',
+            `Your order #${currentOrder.id} from ${currentOrder.restaurantName} is now ready for pickup by the rider.`,
+            <Package className="w-5 h-5 text-orange-600" />
+          );
+        }
+      });
+    }
+    prevOrdersRef.current = orders;
+  }, [orders, currentRole]);
+
   // Cart & checkout process
+  const [reorderDraft, setReorderDraft] = useState<{ orderId: string, restaurantName: string, items: { item: MenuItem; quantity: number; restaurantId: string }[] } | null>(null);
+  
+  // Loyalty & VIP Program
+  const [loyaltyPoints, setLoyaltyPoints] = useState<number>(() => {
+    try {
+      return parseInt(safeStorage.getItem('foodrush_loyalty_points') || '150', 10);
+    } catch {
+      return 150;
+    }
+  }); // Start with 150 points
+  const [isVip, setIsVip] = useState<boolean>(() => {
+    try {
+      return safeStorage.getItem('foodrush_vip') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [showLoyalty, setShowLoyalty] = useState<boolean>(false);
+  const [pointsRedeemed, setPointsRedeemed] = useState<number>(0);
+
+  useEffect(() => {
+    safeStorage.setItem('foodrush_loyalty_points', loyaltyPoints.toString());
+  }, [loyaltyPoints]);
+
+  useEffect(() => {
+    safeStorage.setItem('foodrush_vip', isVip ? 'true' : 'false');
+  }, [isVip]);
+
   const [cart, setCart] = useState<{ item: MenuItem; quantity: number; restaurantId: string }[]>(() => {
     try {
-      const cached = localStorage.getItem('foodrush_cart');
+      const cached = safeStorage.getItem('foodrush_cart');
       return cached ? JSON.parse(cached) : [];
     } catch {
       return [];
     }
   });
-  const [checkoutAddress, setCheckoutAddress] = useState<string>(() => localStorage.getItem('foodrush_address') || 'Suite 404, 82 Central Dr, Food District');
-  const [checkoutPhone, setCheckoutPhone] = useState<string>(() => localStorage.getItem('foodrush_phone') || '+1 (555) 333-2222');
+  const [checkoutAddress, setCheckoutAddress] = useState<string>(() => {
+    try {
+      return safeStorage.getItem('foodrush_address') || 'Suite 404, 82 Central Dr, Food District';
+    } catch {
+      return 'Suite 404, 82 Central Dr, Food District';
+    }
+  });
+  const [checkoutPhone, setCheckoutPhone] = useState<string>(() => {
+    try {
+      return safeStorage.getItem('foodrush_phone') || '+1 (555) 333-2222';
+    } catch {
+      return '+1 (555) 333-2222';
+    }
+  });
   const [driverTip, setDriverTip] = useState<number>(3);
   const [deliveryNote, setDeliveryNote] = useState<string>('Leave at the apartment lobby table.');
   const [promoCode, setPromoCode] = useState<string>('');
@@ -320,6 +397,45 @@ export default function App() {
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card' | 'jazzcash' | 'easypaisa' | 'bank'>('cod');
   const [selectedBank, setSelectedBank] = useState<string>('');
   const [isPlacingOrder, setIsPlacingOrder] = useState<boolean>(false);
+
+  // User Profile state
+  const [profileOpen, setProfileOpen] = useState<boolean>(false);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    vehicle: 'Motorcycle',
+    restaurantName: 'My Restaurant',
+    cuisine: 'American',
+    department: 'Super Admin'
+  });
+
+  useEffect(() => {
+    if (profileOpen && userSession) {
+      let safeVehicle = 'Motorcycle';
+      let safeRestName = 'My Restaurant';
+      let safeCuisine = 'American';
+      let safeDept = 'Super Admin';
+      try {
+        safeVehicle = safeStorage.getItem('foodrush_rider_vehicle') || 'Motorcycle';
+        safeRestName = safeStorage.getItem('foodrush_rest_name') || 'My Restaurant';
+        safeCuisine = safeStorage.getItem('foodrush_rest_cuisine') || 'American';
+        safeDept = safeStorage.getItem('foodrush_admin_dept') || 'Super Admin';
+      } catch (e) {
+        // ignore
+      }
+      setProfileForm({
+        ...profileForm,
+        name: userSession.name || '',
+        phone: checkoutPhone,
+        address: checkoutAddress,
+        vehicle: safeVehicle,
+        restaurantName: safeRestName,
+        cuisine: safeCuisine,
+        department: safeDept
+      });
+    }
+  }, [profileOpen]);
 
   // AI & Chatbots state
   const [chatbotOpen, setChatbotOpen] = useState<boolean>(false);
@@ -350,15 +466,15 @@ export default function App() {
 
   // Auto poll data loop to capture status updates or live rider positions
   useEffect(() => {
-    localStorage.setItem('foodrush_address', checkoutAddress);
+    safeStorage.setItem('foodrush_address', checkoutAddress);
   }, [checkoutAddress]);
 
   useEffect(() => {
-    localStorage.setItem('foodrush_phone', checkoutPhone);
+    safeStorage.setItem('foodrush_phone', checkoutPhone);
   }, [checkoutPhone]);
 
   useEffect(() => {
-    localStorage.setItem('foodrush_cart', JSON.stringify(cart));
+    safeStorage.setItem('foodrush_cart', JSON.stringify(cart));
   }, [cart]);
 
   useEffect(() => {
@@ -418,6 +534,36 @@ export default function App() {
     }
   };
 
+  const handleDownloadReceipt = (order: Order) => {
+    let receiptContent = `======================================\n`;
+    receiptContent += `         FOODRUSH RECEIPT\n`;
+    receiptContent += `======================================\n\n`;
+    receiptContent += `Order ID: #${order.id}\n`;
+    receiptContent += `Date: ${new Date(order.createdAt).toLocaleString()}\n`;
+    receiptContent += `Restaurant: ${order.restaurantName}\n`;
+    receiptContent += `--------------------------------------\n`;
+    order.items.forEach(item => {
+      receiptContent += `${item.quantity}x ${item.name} - $${(item.price * item.quantity).toFixed(2)}\n`;
+    });
+    receiptContent += `--------------------------------------\n`;
+    receiptContent += `Total: $${order.total.toFixed(2)}\n`;
+    receiptContent += `Payment Method: ${order.paymentMethod.toUpperCase()}\n\n`;
+    receiptContent += `Customer: ${order.customerName}\n`;
+    receiptContent += `Delivery To: ${order.customerAddress}\n`;
+    if (order.deliveryNote) {
+      receiptContent += `Note: ${order.deliveryNote}\n`;
+    }
+    receiptContent += `\nThank you for ordering with FoodRush!\n`;
+
+    const blob = new Blob([receiptContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `receipt-${order.id}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const safeJson = async (res: Response) => {
     if (!res.ok) throw new Error(`Status ${res.status}`);
     const contentType = res.headers.get('content-type');
@@ -433,10 +579,10 @@ export default function App() {
 
       // Load from localStorage first to handle weak connections
       try {
-        const cachedRestaurants = localStorage.getItem('foodrush_restaurants');
-        const cachedOrders = localStorage.getItem('foodrush_orders');
-        const cachedRiders = localStorage.getItem('foodrush_riders');
-        const cachedAnalytics = localStorage.getItem('foodrush_analytics');
+        const cachedRestaurants = safeStorage.getItem('foodrush_restaurants');
+        const cachedOrders = safeStorage.getItem('foodrush_orders');
+        const cachedRiders = safeStorage.getItem('foodrush_riders');
+        const cachedAnalytics = safeStorage.getItem('foodrush_analytics');
 
         if (cachedRestaurants) setRestaurants(JSON.parse(cachedRestaurants));
         if (cachedOrders) setOrders(JSON.parse(cachedOrders));
@@ -456,7 +602,7 @@ export default function App() {
         }
       } catch (err) {
         console.warn('Failed to fetch from /api/restaurants, using local fallback seeds.', err);
-        const cached = localStorage.getItem('foodrush_restaurants');
+        const cached = safeStorage.getItem('foodrush_restaurants');
         restData = cached ? JSON.parse(cached) : STATIC_FALLBACK_RESTAURANTS;
       }
 
@@ -467,7 +613,7 @@ export default function App() {
         ordersData = await safeJson(res);
       } catch (err) {
         console.warn('Failed to fetch from /api/orders, using cached or empty.', err);
-        const cached = localStorage.getItem('foodrush_orders');
+        const cached = safeStorage.getItem('foodrush_orders');
         ordersData = cached ? JSON.parse(cached) : [];
       }
 
@@ -481,7 +627,7 @@ export default function App() {
         }
       } catch (err) {
         console.warn('Failed to fetch from /api/riders, using fallback seeds.', err);
-        const cached = localStorage.getItem('foodrush_riders');
+        const cached = safeStorage.getItem('foodrush_riders');
         ridersData = cached ? JSON.parse(cached) : STATIC_FALLBACK_RIDERS;
       }
 
@@ -492,7 +638,7 @@ export default function App() {
         analyticsData = await safeJson(res);
       } catch (err) {
         console.warn('Failed to fetch from /api/admin/analytics, using default analytics.', err);
-        const cached = localStorage.getItem('foodrush_analytics');
+        const cached = safeStorage.getItem('foodrush_analytics');
         analyticsData = cached ? JSON.parse(cached) : STATIC_FALLBACK_ANALYTICS;
       }
 
@@ -503,10 +649,10 @@ export default function App() {
 
       // Update cache
       try {
-        localStorage.setItem('foodrush_restaurants', JSON.stringify(restData));
-        localStorage.setItem('foodrush_orders', JSON.stringify(ordersData));
-        localStorage.setItem('foodrush_riders', JSON.stringify(ridersData));
-        localStorage.setItem('foodrush_analytics', JSON.stringify(analyticsData));
+        safeStorage.setItem('foodrush_restaurants', JSON.stringify(restData));
+        safeStorage.setItem('foodrush_orders', JSON.stringify(ordersData));
+        safeStorage.setItem('foodrush_riders', JSON.stringify(ridersData));
+        safeStorage.setItem('foodrush_analytics', JSON.stringify(analyticsData));
       } catch (cacheErr) {
         console.warn('Failed to update localStorage cache', cacheErr);
       }
@@ -549,19 +695,19 @@ export default function App() {
 
       if (restData && Array.isArray(restData) && restData.length > 0) {
         setRestaurants(restData);
-        localStorage.setItem('foodrush_restaurants', JSON.stringify(restData));
+        safeStorage.setItem('foodrush_restaurants', JSON.stringify(restData));
       }
       if (ordersData && Array.isArray(ordersData)) {
         setOrders(ordersData);
-        localStorage.setItem('foodrush_orders', JSON.stringify(ordersData));
+        safeStorage.setItem('foodrush_orders', JSON.stringify(ordersData));
       }
       if (ridersData && Array.isArray(ridersData) && ridersData.length > 0) {
         setRiders(ridersData);
-        localStorage.setItem('foodrush_riders', JSON.stringify(ridersData));
+        safeStorage.setItem('foodrush_riders', JSON.stringify(ridersData));
       }
       if (analyticsData) {
         setAnalytics(analyticsData);
-        localStorage.setItem('foodrush_analytics', JSON.stringify(analyticsData));
+        safeStorage.setItem('foodrush_analytics', JSON.stringify(analyticsData));
       }
     } catch (e) {
       // Gracefully silent during minor reloads
@@ -615,11 +761,21 @@ export default function App() {
   const getCartTotals = () => {
     const subtotal = cart.reduce((sum, c) => sum + (c.item.price * c.quantity), 0);
     const activeRest = restaurants.find(r => r.id === cart[0]?.restaurantId);
-    const deliveryFee = activeRest ? activeRest.deliveryFee : 0;
+    let deliveryFee = activeRest ? activeRest.deliveryFee : 0;
+    
+    if (isVip) {
+      deliveryFee = 0; // VIP gets free delivery
+    }
+    
     const tax = subtotal * 0.09;
-    const discount = promoApplied ? subtotal * 0.5 : 0; // 50% discount codes!
+    let promoDiscount = promoApplied ? subtotal * 0.5 : 0; // 50% discount codes!
+    
+    // Calculate points discount: 100 points = $1
+    const loyaltyDiscount = pointsRedeemed / 100;
+    
+    const discount = promoDiscount + loyaltyDiscount;
     const grandTotal = Math.max(0, subtotal + deliveryFee + tax + driverTip - discount);
-    return { subtotal, deliveryFee, tax, discount, grandTotal };
+    return { subtotal, deliveryFee, tax, discount, grandTotal, loyaltyDiscount, promoDiscount };
   };
 
   const handleApplyPromo = () => {
@@ -664,11 +820,21 @@ export default function App() {
         // Insert and sync instantly
         setOrders(orig => [newlyCreated, ...orig]);
         setActiveOrderId(newlyCreated.id);
+        
+        // Update Loyalty Points
+        const pointsEarned = Math.floor(totals.grandTotal * 10);
+        setLoyaltyPoints(prev => prev - pointsRedeemed + pointsEarned);
+        if (!isVip && (loyaltyPoints - pointsRedeemed + pointsEarned) >= 5000) {
+          addToast('🎉 VIP Status Unlocked!', 'You have accumulated over 5000 points and unlocked lifetime VIP status with free deliveries!');
+          setIsVip(true);
+        }
+        setPointsRedeemed(0);
+
         clearCart();
         setCheckoutStep(false);
         setActiveRestaurantId(null);
         // Switch to Customer tracking
-        alert(`Order ${newlyCreated.id} successfully placed! We've automatically notified the Chef!`);
+        alert(`Order ${newlyCreated.id} successfully placed! You earned ${pointsEarned} loyalty points!`);
       }
     } catch (e) {
       alert('Failed placing order.');
@@ -881,7 +1047,7 @@ export default function App() {
         onLoginSuccess={(session) => {
           setUserSession(session);
           setCurrentRole(session.role);
-          localStorage.setItem('foodrush_session2', JSON.stringify(session));
+          safeStorage.setItem('foodrush_session2', JSON.stringify(session));
         }}
       />
     );
@@ -890,6 +1056,26 @@ export default function App() {
   return (
     <div id="foodrush-app-container" className="min-h-screen bg-zinc-50 flex flex-col font-sans text-slate-900 selection:bg-orange-100 selection:text-orange-900">
       
+      {/* Toast Notification Container */}
+      <div className="fixed top-20 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+        {toasts.map(toast => (
+          <div key={toast.id} className="bg-white border border-zinc-200 pointer-events-auto p-4 rounded-xl shadow-xl flex items-start gap-4 transform transition-all duration-300 w-[340px] animate-in slide-in-from-right-8 fade-in">
+            {toast.icon && (
+              <div className="text-orange-600 bg-orange-50 p-2 rounded-lg shrink-0">
+                {toast.icon}
+              </div>
+            )}
+            <div className="flex flex-col flex-1 mt-0.5">
+              <h4 className="font-bold text-sm text-slate-800">{toast.title}</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{toast.message}</p>
+            </div>
+            <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))} className="text-zinc-400 hover:text-zinc-700 shrink-0 p-1 -mr-2">
+              <X className="w-4 h-4"/>
+            </button>
+          </div>
+        ))}
+      </div>
+
       {/* GLOBAL BANNER SIMULATORS SWITCHER: Elegant interactive tool belt */}
       <div id="role-switcher" className="sticky top-0 z-50 bg-zinc-900 border-b border-zinc-800 text-white py-2 px-3 sm:px-4 flex flex-col md:flex-row gap-2 items-center justify-between">
         <div className="flex items-center gap-2">
@@ -991,15 +1177,20 @@ export default function App() {
 
             {userSession && (
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 pl-2 bg-zinc-50 border border-zinc-200 p-1.5 rounded-2xl transition">
-                  <img src={userSession.avatar} className="w-7 h-7 rounded-lg bg-zinc-200 p-0.5 border border-zinc-300" alt="Google Profile" />
-                  <div className="hidden lg:flex flex-col text-left text-[11px] leading-tight pr-1">
+                <div 
+                  onClick={() => setProfileOpen(true)}
+                  className="flex items-center gap-2 pl-2 bg-zinc-50 border border-zinc-200 p-1.5 rounded-2xl transition cursor-pointer hover:bg-zinc-100 hover:border-zinc-300"
+                  title="Edit Profile"
+                >
+                  <img src={userSession.avatar} className="w-7 h-7 rounded-lg bg-zinc-200 p-0.5 border border-zinc-300 pointer-events-none" alt="Google Profile" />
+                  <div className="hidden lg:flex flex-col text-left text-[11px] leading-tight pr-1 pointer-events-none">
                     <span className="font-extrabold text-slate-800 truncate max-w-[110px]">{userSession.name}</span>
                     <span className="text-zinc-500 font-mono text-[9px] truncate max-w-[110px]">{userSession.email}</span>
                   </div>
                   <button
-                    onClick={() => {
-                      localStorage.removeItem('foodrush_session2');
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      safeStorage.removeItem('foodrush_session2');
                       setUserSession(null);
                     }}
                     title="Sign Out of Google"
@@ -1026,16 +1217,22 @@ export default function App() {
               <aside className="w-60 border-r border-zinc-200 bg-white p-5 flex flex-col gap-6 flex-none hidden lg:flex">
                 <nav className="flex flex-col gap-1.5">
                   <button
-                    onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(false); }}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${!activeRestaurantId && !activeOrderId && !showOrderHistory ? 'bg-orange-50 text-orange-600' : 'text-zinc-600 hover:bg-zinc-50'}`}
+                    onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(false); setShowLoyalty(false); }}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${!activeRestaurantId && !activeOrderId && !showOrderHistory && !showLoyalty ? 'bg-orange-50 text-orange-600' : 'text-zinc-600 hover:bg-zinc-50'}`}
                   >
                     <Compass className="w-4 h-4" /> Discover Restaurants
                   </button>
                   <button
-                    onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(true); }}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${showOrderHistory ? 'bg-orange-50 text-orange-600' : 'text-zinc-600 hover:bg-zinc-50'}`}
+                    onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(true); setShowLoyalty(false); }}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${showOrderHistory && !showLoyalty ? 'bg-orange-50 text-orange-600' : 'text-zinc-600 hover:bg-zinc-50'}`}
                   >
                     <Clock className="w-4 h-4" /> Order History
+                  </button>
+                  <button
+                    onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(false); setShowLoyalty(true); }}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${showLoyalty ? 'bg-orange-50 text-orange-600' : 'text-zinc-600 hover:bg-zinc-50'}`}
+                  >
+                    <Star className="w-4 h-4" /> Loyalty & Rewards
                   </button>
 
                   <div className="text-[10px] font-black tracking-wider uppercase text-zinc-400 mt-4 px-4">Your Recent Orders</div>
@@ -1080,20 +1277,27 @@ export default function App() {
                 
                 {/* Responsive Top Navigation and Shortcuts for Mobile (lg:hidden) */}
                 <div className="lg:hidden flex flex-col gap-3 flex-none">
-                  <div className="flex bg-zinc-100 p-1 rounded-2xl border border-zinc-200 w-full">
+                  <div className="flex bg-zinc-100 p-1 rounded-2xl border border-zinc-200 w-full overflow-x-auto">
                     <button
-                      onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(false); }}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${!activeRestaurantId && !activeOrderId && !showOrderHistory ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                      onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(false); setShowLoyalty(false); }}
+                      className={`flex-[1_0_auto] px-3 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${!activeRestaurantId && !activeOrderId && !showOrderHistory && !showLoyalty ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
                     >
                       <Compass className="w-4 h-4" />
                       <span>Discover</span>
                     </button>
                     <button
-                      onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(true); }}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${showOrderHistory && !activeRestaurantId && !activeOrderId ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                      onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(true); setShowLoyalty(false); }}
+                      className={`flex-[1_0_auto] px-3 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${showOrderHistory && !activeRestaurantId && !activeOrderId && !showLoyalty ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
                     >
                       <Clock className="w-4 h-4" />
-                      <span>History ({orders.length})</span>
+                      <span>History</span>
+                    </button>
+                    <button
+                      onClick={() => { setActiveRestaurantId(null); setActiveOrderId(null); setShowOrderHistory(false); setShowLoyalty(true); }}
+                      className={`flex-[1_0_auto] px-3 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${showLoyalty ? 'bg-orange-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                    >
+                      <Star className="w-4 h-4" />
+                      <span>Loyalty</span>
                     </button>
                   </div>
                   
@@ -1140,7 +1344,7 @@ export default function App() {
                 </div>
 
                 {/* 1. Discover List View */}
-                {!activeRestaurantId && !activeOrderId && !showOrderHistory && (
+                {!activeRestaurantId && !activeOrderId && !showOrderHistory && !showLoyalty && (
                   <>
                     {/* Sleek Gradient Banner */}
                     <section id="promo-banner" className="min-h-[14rem] sm:min-h-0 sm:h-44 bg-gradient-to-r from-orange-500 to-rose-500 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center text-white relative overflow-hidden flex-none shadow-sm gap-4">
@@ -1278,7 +1482,7 @@ export default function App() {
                 )}
 
                 {/* 1.5 Order History View */}
-                {showOrderHistory && !activeRestaurantId && !activeOrderId && (
+                {showOrderHistory && !activeRestaurantId && !activeOrderId && !showLoyalty && (
                   <div className="flex flex-col gap-6">
                     <section className="bg-white rounded-3xl p-6 shadow-sm border border-zinc-200">
                       <div className="flex justify-between items-center border-b border-zinc-100 pb-4 mb-4">
@@ -1360,31 +1564,118 @@ export default function App() {
                                 </div>
                                 <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                                   <span className="font-black text-lg text-slate-800">${order.total.toFixed(2)}</span>
-                                  <button
-                                    onClick={() => {
-                                      if (rest) {
-                                        if (rest.isOpen) {
-                                          setCart(order.items.map(i => ({ item: rest.menu.find(m => m.name === i.name)!, quantity: i.quantity, restaurantId: rest.id })).filter(i => i.item));
-                                          setActiveRestaurantId(rest.id);
-                                          setShowOrderHistory(false);
-                                          setIsCartOpen(true);
+                                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <button
+                                      onClick={() => {
+                                        setActiveOrderId(order.id);
+                                        setShowOrderHistory(false);
+                                        setTrackingViewMode('map');
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                      }}
+                                      className="bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold py-2 px-4 rounded-xl text-xs flex-1 sm:flex-none transition-colors whitespace-nowrap flex items-center justify-center gap-1.5"
+                                    >
+                                      <MapPin className="w-3.5 h-3.5" /> Map
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (rest) {
+                                          if (rest.isOpen) {
+                                            const validItems = order.items.map(i => ({ item: rest.menu.find(m => m.name === i.name)!, quantity: i.quantity, restaurantId: rest.id })).filter(i => i.item);
+                                            setReorderDraft({ orderId: order.id, restaurantName: order.restaurantName, items: validItems });
+                                          } else {
+                                            alert('Sorry, this restaurant is currently closed. Please try ordering again during their operating hours.');
+                                          }
                                         } else {
-                                          alert('Sorry, this restaurant is currently closed. Please try ordering again during their operating hours.');
+                                          alert('Restaurant no longer available.');
                                         }
-                                      } else {
-                                        alert('Restaurant no longer available.');
-                                      }
-                                    }}
-                                    className="bg-zinc-900 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-xl text-xs w-full sm:w-auto transition-colors"
-                                  >
-                                    Reorder
-                                  </button>
+                                      }}
+                                      className="bg-zinc-900 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-xl text-xs flex-1 sm:flex-none transition-colors"
+                                    >
+                                      Reorder
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             );
                           })}
                         </div>
                       )}
+                    </section>
+                  </div>
+                )}
+
+                {/* 1.7 Loyalty & Rewards View */}
+                {showLoyalty && !activeRestaurantId && !activeOrderId && !showOrderHistory && (
+                  <div className="flex flex-col gap-6">
+                    <section className="bg-white rounded-3xl p-6 shadow-sm border border-zinc-200">
+                      <div className="flex justify-between items-center border-b border-zinc-100 pb-4 mb-4">
+                        <h2 className="text-xl font-black text-slate-800">Loyalty & VIP Program</h2>
+                        <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-xl border border-orange-100">
+                           <Star className="w-4 h-4 text-orange-500" />
+                           <span className="text-sm font-black text-orange-900">{loyaltyPoints} Points</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {/* VIP Status Card */}
+                        <div className={`p-6 rounded-2xl border ${isVip ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-200' : 'bg-zinc-50 border-zinc-200'}`}>
+                          <div className="flex items-start justify-between mb-2">
+                             <h3 className="text-lg font-black text-slate-800">{isVip ? 'VIP Member' : 'Standard Tier'}</h3>
+                             {isVip && <span className="bg-orange-600 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-full shadow-sm">Active</span>}
+                          </div>
+                          <p className="text-xs text-zinc-600 leading-relaxed mb-4">
+                             {isVip ? 'You have unlocked lifetime VIP status! Enjoy free deliveries on every order and exclusive surprise perks.' : 'Earn 5000 points to unlock lifetime VIP status for permanent free delivery on all orders!'}
+                          </p>
+                          
+                          {!isVip && (
+                             <div className="relative w-full h-2 bg-zinc-200 rounded-full overflow-hidden mt-4">
+                                <div className="absolute top-0 left-0 h-full bg-orange-500 rounded-full transition-all" style={{ width: `${Math.min(100, (loyaltyPoints / 5000) * 100)}%`}}></div>
+                             </div>
+                          )}
+                          {!isVip && <p className="text-[10px] text-zinc-400 mt-1.5 font-medium">{Math.max(0, 5000 - loyaltyPoints)} points until VIP</p>}
+                        </div>
+
+                        {/* Earn Points Actions */}
+                        <div className="flex flex-col gap-3">
+                          <h4 className="text-sm font-bold text-slate-800">Earn More Points</h4>
+                          
+                          <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex justify-between items-center shadow-sm">
+                            <div>
+                               <p className="text-xs font-black text-slate-800 text-left">Order Food</p>
+                               <p className="text-[10px] text-zinc-500 mt-0.5 text-left">10 points for every $1 spent</p>
+                            </div>
+                            <button onClick={() => setShowLoyalty(false)} className="bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">Order Now</button>
+                          </div>
+
+                          <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex justify-between items-center shadow-sm">
+                            <div>
+                               <p className="text-xs font-black text-slate-800 text-left">Refer a Friend</p>
+                               <p className="text-[10px] text-zinc-500 mt-0.5 text-left">Earn 500 points per referral</p>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                setLoyaltyPoints(prev => prev + 500);
+                                addToast('Referral Sent!', '500 bonus points have been added to your account!', <Star className="text-orange-500 w-5 h-5" />);
+                              }} 
+                              className="bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-200 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                            >Share Link</button>
+                          </div>
+                        </div>
+
+                      </div>
+
+                      {/* Points History dummy */}
+                      <div className="mt-8">
+                         <h4 className="text-sm font-bold text-slate-800 border-b border-zinc-100 pb-2 mb-3 text-left">Recent Activity</h4>
+                         <div className="flex flex-col gap-2">
+                           <div className="flex justify-between items-center text-xs text-zinc-600 bg-zinc-50 p-2.5 rounded-xl border border-zinc-100">
+                             <span>Welcome Bonus</span>
+                             <span className="font-bold text-green-600">+150 pts</span>
+                           </div>
+                         </div>
+                      </div>
+
                     </section>
                   </div>
                 )}
@@ -1599,25 +1890,35 @@ export default function App() {
                                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                                   <h2 className="text-xl font-black text-slate-900">Tracing Delivery #{order.id}</h2>
                                   
-                                  {/* Beautiful and professional Share Button */}
-                                  <button
-                                    onClick={() => handleShareTracking(order.id)}
-                                    className={`flex items-center gap-1.5 border px-2.5 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer shadow-sm shrink-0 ${copiedState ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-50 hover:border-green-200' : 'bg-zinc-50 hover:bg-orange-50 text-zinc-700 hover:text-orange-700 border-zinc-200 hover:border-orange-250'}`}
-                                    title="Share live delivery tracking link with friends"
-                                    id="btn-share-tracking"
-                                  >
-                                    {copiedState ? (
-                                      <>
-                                        <Check className="w-3.5 h-3.5" />
-                                        <span>Link Copied!</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Share2 className="w-3.5 h-3.5 animate-pulse" />
-                                        <span>Share Status</span>
-                                      </>
-                                    )}
-                                  </button>
+                                  {/* Beautiful and professional action buttons */}
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                      onClick={() => handleShareTracking(order.id)}
+                                      className={`flex items-center gap-1.5 border px-2.5 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer shadow-sm ${copiedState ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-50 hover:border-green-200' : 'bg-zinc-50 hover:bg-orange-50 text-zinc-700 hover:text-orange-700 border-zinc-200 hover:border-orange-250'}`}
+                                      title="Share live delivery tracking link with friends"
+                                      id="btn-share-tracking"
+                                    >
+                                      {copiedState ? (
+                                        <>
+                                          <Check className="w-3.5 h-3.5" />
+                                          <span>Link Copied!</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Share2 className="w-3.5 h-3.5 animate-pulse" />
+                                          <span>Share Status</span>
+                                        </>
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDownloadReceipt(order)}
+                                      className="flex items-center justify-center gap-1.5 border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 px-2.5 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer shadow-sm"
+                                      title="Download Request as Text"
+                                    >
+                                      <Download className="w-3.5 h-3.5" />
+                                      <span>Receipt</span>
+                                    </button>
+                                  </div>
                                 </div>
                                 <p className="text-xs text-zinc-400 mt-1">From <strong>{order.restaurantName}</strong></p>
                               </div>
@@ -2059,12 +2360,33 @@ export default function App() {
 
                       {/* Summary calculations */}
                       {(() => {
-                        const { subtotal, deliveryFee, tax, discount, grandTotal } = getCartTotals();
+                        const { subtotal, deliveryFee, tax, discount, grandTotal, promoDiscount, loyaltyDiscount } = getCartTotals();
                         return (
                           <div className="text-xs text-zinc-500 flex flex-col gap-2 pt-2 border-t border-zinc-100">
+                            
+                            {/* Points Redemption Offer */}
+                            {loyaltyPoints >= 100 && pointsRedeemed === 0 && (
+                              <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl mb-2 flex items-center justify-between">
+                                <span className="font-bold text-orange-950 flex items-center gap-1.5 text-[11px]"><Star className="w-3.5 h-3.5 text-orange-500" /> Use {Math.floor(loyaltyPoints/100)*100} Points for ${Math.floor(loyaltyPoints/100).toFixed(2)} off!</span>
+                                <button onClick={() => setPointsRedeemed(Math.floor(loyaltyPoints/100)*100)} className="bg-orange-600 text-white font-black text-[10px] px-2 py-1 rounded-lg hover:bg-orange-700 transition">REDEEM</button>
+                              </div>
+                            )}
+                            {pointsRedeemed > 0 && (
+                               <div className="bg-green-50 border border-green-100 p-3 rounded-xl mb-2 flex items-center justify-between">
+                                 <span className="font-bold text-green-800 flex items-center gap-1.5 text-[11px]"><CheckCircle className="w-3.5 h-3.5" /> Redeemed {pointsRedeemed} Points</span>
+                                 <button onClick={() => setPointsRedeemed(0)} className="text-zinc-500 hover:text-zinc-800 font-bold text-[10px] transition">Undo</button>
+                               </div>
+                            )}
+
                             <div className="flex justify-between"><span>Subtotal:</span><span className="font-bold text-slate-800">${subtotal.toFixed(2)}</span></div>
-                            {discount > 0 && <div className="flex justify-between text-green-600"><span>Rush50 Discount:</span><span>-${discount.toFixed(2)}</span></div>}
-                            <div className="flex justify-between"><span>Delivery:</span><span className="font-bold text-slate-800">${deliveryFee.toFixed(2)}</span></div>
+                            {promoDiscount > 0 && <div className="flex justify-between text-green-600"><span>Promo Discount:</span><span>-${promoDiscount.toFixed(2)}</span></div>}
+                            {loyaltyDiscount > 0 && <div className="flex justify-between text-orange-600"><span>Points Discount:</span><span>-${loyaltyDiscount.toFixed(2)}</span></div>}
+                            <div className="flex justify-between"><span>Delivery:</span>
+                              <span className="font-bold text-slate-800">
+                                {isVip ? <span className="text-green-600 uppercase text-[10px] bg-green-100 px-1.5 py-0.5 rounded mr-1">VIP Free</span> : null}
+                                ${deliveryFee.toFixed(2)}
+                              </span>
+                            </div>
                             <div className="flex justify-between"><span>Taxes:</span><span className="font-bold text-slate-800">${tax.toFixed(2)}</span></div>
                             <div className="flex justify-between items-center pt-2 border-t border-zinc-150">
                               <span className="font-black text-slate-900 text-sm">Grand Total value:</span>
@@ -2859,6 +3181,251 @@ export default function App() {
         </div>
 
       </div>
+
+      {/* ==========================================
+          PROFILE EDIT MODAL
+          ========================================== */}
+      {profileOpen && userSession && (
+        <div className="fixed inset-0 z-[100] bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl animate-in slide-in-from-bottom-4 fade-in">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-orange-100 p-2 rounded-2xl">
+                  <User className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 capitalize">{currentRole} Profile</h3>
+                  <p className="text-xs text-zinc-500 font-medium">{userSession.email}</p>
+                </div>
+              </div>
+              <button onClick={() => setProfileOpen(false)} className="p-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-4 mb-6">
+              <div>
+                <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Full Name</label>
+                <input
+                  type="text"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                  placeholder="Your Name"
+                />
+              </div>
+
+              {currentRole === 'customer' && (
+                <>
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Phone Number</label>
+                    <input
+                      type="text"
+                      value={profileForm.phone}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Default Delivery Address</label>
+                    <input
+                      type="text"
+                      value={profileForm.address}
+                      onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="Street, City, Apartment"
+                    />
+                  </div>
+                </>
+              )}
+
+              {currentRole === 'rider' && (
+                <div>
+                  <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Vehicle Type</label>
+                  <input
+                    type="text"
+                    value={profileForm.vehicle}
+                    onChange={(e) => setProfileForm({ ...profileForm, vehicle: e.target.value })}
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                    placeholder="E.g. Motorcycle, Bicycle, Car"
+                  />
+                </div>
+              )}
+
+              {currentRole === 'restaurant' && (
+                <>
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Restaurant Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.restaurantName}
+                      onChange={(e) => setProfileForm({ ...profileForm, restaurantName: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="Restaurant Name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Cuisine Type</label>
+                    <input
+                      type="text"
+                      value={profileForm.cuisine}
+                      onChange={(e) => setProfileForm({ ...profileForm, cuisine: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      placeholder="E.g. Italian, Fast Food"
+                    />
+                  </div>
+                </>
+              )}
+
+              {currentRole === 'admin' && (
+                <div>
+                  <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Department</label>
+                  <input
+                    type="text"
+                    value={profileForm.department}
+                    onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:bg-white transition-all"
+                    placeholder="Department"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => {
+                  const newSession = { ...userSession, name: profileForm.name || userSession.name };
+                  setUserSession(newSession);
+                  safeStorage.setItem('foodrush_session2', JSON.stringify(newSession));
+                  
+                  if (currentRole === 'customer') {
+                    setCheckoutPhone(profileForm.phone);
+                    setCheckoutAddress(profileForm.address);
+                    safeStorage.setItem('foodrush_phone', profileForm.phone);
+                    safeStorage.setItem('foodrush_address', profileForm.address);
+                  } else if (currentRole === 'rider') {
+                    safeStorage.setItem('foodrush_rider_vehicle', profileForm.vehicle);
+                  } else if (currentRole === 'restaurant') {
+                    safeStorage.setItem('foodrush_rest_name', profileForm.restaurantName);
+                    safeStorage.setItem('foodrush_rest_cuisine', profileForm.cuisine);
+                  } else if (currentRole === 'admin') {
+                    safeStorage.setItem('foodrush_admin_dept', profileForm.department);
+                  }
+                  
+                  setProfileOpen(false);
+                  addToast('Profile Updated', 'Your profile details have been saved successfully.', <CheckCircle className="w-5 h-5 text-green-600" />);
+                }}
+                className="w-full py-3 px-4 rounded-xl font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-600/20 transition-all text-sm"
+              >
+                Save Changes
+              </button>
+              
+              <button 
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                    safeStorage.removeItem('foodrush_session2');
+                    setUserSession(null);
+                    setProfileOpen(false);
+                    setCurrentRole('customer');
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl font-bold bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 transition-all text-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==========================================
+          REORDER DRAFT MODAL
+          ========================================== */}
+      {reorderDraft && (
+        <div className="fixed inset-0 z-[100] bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl animate-in slide-in-from-bottom-4 fade-in">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-xl font-black text-slate-900">Adjust Reorder</h3>
+                <p className="text-xs text-zinc-500 font-medium">Order #{reorderDraft.orderId} • {reorderDraft.restaurantName}</p>
+              </div>
+              <button onClick={() => setReorderDraft(null)} className="p-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-4 max-h-[40vh] overflow-y-auto pr-2 mb-6">
+              {reorderDraft.items.length === 0 ? (
+                <div className="text-center py-6 text-zinc-400 text-sm">No items remaining.</div>
+              ) : (
+                reorderDraft.items.map((cartItem, idx) => (
+                  <div key={`${cartItem.item.id}-${idx}`} className="flex justify-between items-center bg-zinc-50 p-3 rounded-2xl border border-zinc-100">
+                    <div className="flex-1 mr-4">
+                      <p className="font-bold text-slate-800 text-sm line-clamp-1">{cartItem.item.name}</p>
+                      <p className="text-xs text-orange-600 font-black mt-0.5">${(cartItem.item.price * cartItem.quantity).toFixed(2)}</p>
+                    </div>
+                    <div className="flex items-center gap-3 bg-white border border-zinc-200 rounded-xl px-2 py-1 shadow-sm shrink-0">
+                      <button
+                        onClick={() => {
+                          setReorderDraft(prev => {
+                            if (!prev) return prev;
+                            const newItems = [...prev.items];
+                            if (newItems[idx].quantity > 1) {
+                              newItems[idx].quantity -= 1;
+                            } else {
+                              newItems.splice(idx, 1);
+                            }
+                            return { ...prev, items: newItems };
+                          });
+                        }}
+                        className="w-6 h-6 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded transition-colors font-bold"
+                      >-</button>
+                      <span className="text-xs font-black w-3 text-center">{cartItem.quantity}</span>
+                      <button
+                        onClick={() => {
+                          setReorderDraft(prev => {
+                            if (!prev) return prev;
+                            const newItems = [...prev.items];
+                            newItems[idx].quantity += 1;
+                            return { ...prev, items: newItems };
+                          });
+                        }}
+                        className="w-6 h-6 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded transition-colors font-bold"
+                      >+</button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-zinc-100">
+              <button 
+                onClick={() => setReorderDraft(null)}
+                className="flex-1 py-3 px-4 rounded-xl font-bold bg-zinc-100 text-zinc-700 hover:bg-zinc-200 transition-colors text-sm"
+              >
+                Cancel
+              </button>
+              <button 
+                disabled={reorderDraft.items.length === 0}
+                onClick={() => {
+                  if (reorderDraft.items.length > 0) {
+                    setCart(reorderDraft.items);
+                    setActiveRestaurantId(reorderDraft.items[0].restaurantId);
+                    setShowOrderHistory(false);
+                    setReorderDraft(null);
+                    setIsCartOpen(true);
+                  }
+                }}
+                className="flex-1 py-3 px-4 rounded-xl font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+              >
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ==========================================
           INTELLIGENT AI RECOMMENDATION CHAT DRAWER (POPUP)
