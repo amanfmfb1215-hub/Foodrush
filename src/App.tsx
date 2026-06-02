@@ -48,7 +48,10 @@ import {
   Utensils,
   Download,
   Printer,
-  Eye
+  Eye,
+  Crown,
+  Trophy,
+  Gift
 } from 'lucide-react';
 import { MenuItem, Restaurant, Order, OrderStatus, ChatMessage, Rider, PlatformAnalytics, Review, OrderItem } from './types';
 import AppFooter from './components/AppFooter';
@@ -259,6 +262,73 @@ const safeStorage = {
   setItem: (k: string, v: string) => { try { window.localStorage.setItem(k, v); } catch {} },
   removeItem: (k: string) => { try { window.localStorage.removeItem(k); } catch {} }
 };
+
+// Loyalty Tiers definition and perk breakdowns
+export function getCurrentTier(points: number) {
+  if (points >= 1500) {
+    return {
+      type: 'Gold' as const,
+      name: 'Gold Elite',
+      icon: '🏆',
+      badge: '🏆 Gold Elite Rank',
+      border: 'border-yellow-400',
+      bgClass: 'from-amber-400 via-yellow-500 to-amber-600',
+      textAccent: 'text-amber-100',
+      tagline: 'Superb Golden tier status with maximum VIP benefits.',
+      multiplier: '1.5x Multiplier',
+      percentage: 100,
+      pointsToNext: 0,
+      nextTierName: 'Max Tier reached',
+      perks: [
+        '✨ 1.5x Points Multiplier (Earn 15 pts per $1 spent)',
+        '🚚 Zero Delivery Fees: Permanent free delivery (orders over $15)',
+        '🧧 Premium Vouchers: Hidden Buy-One-Get-One-Free menu deals',
+        '💬 Concierge Hotline: Live priority chat with instant chef overrides'
+      ]
+    };
+  } else if (points >= 500) {
+    return {
+      type: 'Silver' as const,
+      name: 'Silver Rider',
+      icon: '🥈',
+      badge: '🥈 Silver Rider Rank',
+      border: 'border-zinc-300',
+      bgClass: 'from-slate-400 via-zinc-500 to-zinc-650',
+      textAccent: 'text-slate-100',
+      tagline: 'Elevated Silver status with fast deliveries & multipliers.',
+      multiplier: '1.2x Multiplier',
+      percentage: ((points - 500) / 1000) * 100,
+      pointsToNext: 1500 - points,
+      nextTierName: 'Gold Elite',
+      perks: [
+        '⚡ 1.2x Points Multiplier (Earn 12 pts per $1 spent)',
+        '🎟️ Courier Upgrade: 15% off delivery fees on all restaurant orders',
+        '🎁 Tasty treats: Access to weekly free appetizer/drink coupons',
+        '⚡ Priority dispatch: Faster chef prep & active rider assignments'
+      ]
+    };
+  } else {
+    return {
+      type: 'Bronze' as const,
+      name: 'Bronze Foodie',
+      icon: '🥉',
+      badge: '🥉 Bronze Foodie Rank',
+      border: 'border-orange-500',
+      bgClass: 'from-amber-700 via-orange-600 to-amber-805',
+      textAccent: 'text-orange-100',
+      tagline: 'Standard member level. Earn points with every order to rank up!',
+      multiplier: '1.0x',
+      percentage: (points / 500) * 100,
+      pointsToNext: 500 - points,
+      nextTierName: 'Silver Rider',
+      perks: [
+        '🍔 Standard Earning (Earn 10 pts for every $1 spent)',
+        '💵 Simple Cash Back (Save $1 for each 100 pts redeemed)',
+        '📅 Member Newsletters: Monthly promo codes & local food news'
+      ]
+    };
+  }
+}
 
 export default function App() {
   // Authenticated user session with Google Auth
@@ -2325,76 +2395,539 @@ export default function App() {
                   </div>
                 )}
 
-                {/* 1.7 Loyalty & Rewards View */}
+                      {/* 1.7 Loyalty & Rewards View */}
                 {showLoyalty && !activeRestaurantId && !activeOrderId && !showOrderHistory && (
-                  <div className="flex flex-col gap-6">
-                    <section className="bg-white rounded-3xl p-6 shadow-sm border border-zinc-200">
-                      <div className="flex justify-between items-center border-b border-zinc-100 pb-4 mb-4">
-                        <h2 className="text-xl font-black text-slate-800">Loyalty & VIP Program</h2>
-                        <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-xl border border-orange-100">
-                           <Star className="w-4 h-4 text-orange-500" />
-                           <span className="text-sm font-black text-orange-900">{loyaltyPoints} Points</span>
+                  <div className="flex flex-col gap-6 loyalty-section">
+                    <section className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-zinc-200">
+                      
+                      {/* Top Header */}
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-100 pb-5 mb-6 text-left">
+                        <div>
+                          <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                            <Crown className="w-6 h-6 text-amber-500 animate-bounce" />
+                            Loyalty & Tier VIP Program
+                          </h2>
+                          <p className="text-xs text-zinc-500 font-semibold mt-1">
+                            Earn points dynamically with every bite. Unlock higher tiers for permanent free delivery, priority dispatch, and custom multiplier rewards!
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-2 rounded-2xl border border-orange-100 shrink-0 shadow-sm">
+                           <Trophy className="w-5 h-5 text-amber-500" />
+                           <span className="text-sm font-black text-orange-950">{loyaltyPoints} Total Points</span>
                         </div>
                       </div>
 
+                      {/* TIER DISPLAY GRID */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
+                        {/* Bronze Card */}
+                        {(() => {
+                          const isCurrent = loyaltyPoints < 500;
+                          return (
+                            <div 
+                              className={`p-5 rounded-2xl border transition-all ${
+                                isCurrent 
+                                  ? 'bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100/40 border-amber-300 shadow-md ring-2 ring-orange-500/10 tier-card-active glow-hover-bronze'
+                                  : 'bg-slate-50 border-zinc-200 opacity-75'
+                              }`}
+                              style={isCurrent ? { '--glow-shadow': 'rgba(180, 83, 9, 0.25)', '--glow-border': '#ea580c' } as React.CSSProperties : undefined}
+                            >
+                              <div className="flex justify-between items-center mb-3">
+                                <span className="text-2xl">🥉</span>
+                                <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full shadow-sm ${
+                                  isCurrent ? 'badge-premium-bronze' : 'bg-zinc-200 text-zinc-650 border border-zinc-350'
+                                }`}>
+                                  {isCurrent ? 'Active Level' : '0 - 499 PTS'}
+                                </span>
+                              </div>
+                              <h3 className="text-lg font-black text-slate-900 text-left">Bronze Foodie</h3>
+                              <p className="text-xs text-zinc-500 mt-1 mb-4 font-semibold text-left">Standard tier for new diners. Start earning cashback immediately!</p>
+                              
+                              <div className="border-t border-zinc-200/60 pt-3 space-y-2 text-left">
+                                <p className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
+                                  <Gift className="w-3.5 h-3.5 text-zinc-500" /> Member Benefits:
+                                </p>
+                                <ul className="space-y-1.5 text-[11px] text-zinc-650 font-semibold leading-relaxed">
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                                    <span><b>1.0x Earning:</b> 10 points per $1 spent</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                                    <span><b>Redemption:</b> Save $1 per 100 points redeemed</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                                    <span>Monthly digital promo newsletters & codes</span>
+                                  </li>
+                                </ul>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Silver Card */}
+                        {(() => {
+                          const isCurrent = loyaltyPoints >= 500 && loyaltyPoints < 1500;
+                          const isLocked = loyaltyPoints < 500;
+                          return (
+                            <div 
+                              className={`p-5 rounded-2xl border transition-all ${
+                                isCurrent 
+                                  ? 'bg-gradient-to-br from-zinc-50 via-slate-50 to-zinc-150 border-zinc-300 shadow-md ring-2 ring-zinc-500/10 tier-card-active glow-hover-silver'
+                                  : isLocked
+                                    ? 'bg-zinc-150/40 border-zinc-150 opacity-60'
+                                    : 'bg-slate-50 border-zinc-200 opacity-75'
+                              }`}
+                              style={isCurrent ? { '--glow-shadow': 'rgba(156, 163, 175, 0.25)', '--glow-border': '#9ca3af' } as React.CSSProperties : undefined}
+                            >
+                              <div className="flex justify-between items-center mb-3">
+                                <span className="text-2xl">🥈</span>
+                                <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full shadow-sm ${
+                                  isCurrent 
+                                    ? 'badge-premium-silver' 
+                                    : isLocked 
+                                      ? 'bg-zinc-200 text-zinc-450 border border-zinc-300' 
+                                      : 'bg-zinc-200 text-zinc-650 border border-zinc-300'
+                                }`}>
+                                  {isCurrent ? 'Active Level' : '500 - 1499 PTS'}
+                                </span>
+                              </div>
+                              <h3 className="text-lg font-black text-slate-900 text-left">Silver Rider</h3>
+                              <p className="text-xs text-zinc-500 mt-1 mb-4 font-semibold text-left">Upgraded dispatch priority, better points multipliers, & fee cuts.</p>
+                              
+                              <div className="border-t border-zinc-200/60 pt-3 space-y-2 text-left">
+                                <p className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
+                                  <Gift className="w-3.5 h-3.5 text-zinc-500" /> Member Benefits:
+                                </p>
+                                <ul className="space-y-1.5 text-[11px] text-zinc-650 font-semibold leading-relaxed">
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                                    <span><b>1.2x Earning:</b> 12 points per $1 spent</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                                    <span><b>Courier Trim: 15% Off</b> delivery fees</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                                    <span>Weekly dessert & sweet appetizer coupons</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5 text-indigo-700 font-bold">
+                                    <span className="text-indigo-600 shrink-0">★</span>
+                                    <span>VIP accelerated chef dispatch queues</span>
+                                  </li>
+                                </ul>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Gold Card */}
+                        {(() => {
+                          const isCurrent = loyaltyPoints >= 1500;
+                          const isLocked = loyaltyPoints < 1500;
+                          return (
+                            <div 
+                              className={`p-5 rounded-2xl border transition-all ${
+                                isCurrent 
+                                  ? 'bg-gradient-to-br from-amber-50 via-yellow-50/40 to-yellow-105 border-amber-300 shadow-md ring-2 ring-yellow-500/10 tier-card-active glow-hover-gold'
+                                  : 'bg-zinc-150/40 border-zinc-150 opacity-60'
+                              }`}
+                              style={isCurrent ? { '--glow-shadow': 'rgba(245, 158, 11, 0.25)', '--glow-border': '#fbbf24' } as React.CSSProperties : undefined}
+                            >
+                              <div className="flex justify-between items-center mb-3">
+                                <span className="text-2xl">🏆</span>
+                                <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full shadow-sm ${
+                                  isCurrent ? 'badge-premium-gold' : 'bg-zinc-200 text-zinc-400'
+                                }`}>
+                                  {isCurrent ? 'Elite Active' : '1500+ PTS'}
+                                </span>
+                              </div>
+                              <h3 className="text-lg font-black text-slate-900 text-left">Gold Elite</h3>
+                              <p className="text-xs text-zinc-500 mt-1 mb-4 font-semibold text-left">Premium gourmet tier. Lifetime priority, free delivery & maximum rewards cashback.</p>
+                              
+                              <div className="border-t border-zinc-200/60 pt-3 space-y-2 text-left">
+                                <p className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
+                                  <Gift className="w-3.5 h-3.5 text-zinc-500" /> Member Benefits:
+                                </p>
+                                <ul className="space-y-1.5 text-[11px] text-zinc-700 font-semibold leading-relaxed">
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-amber-600 font-bold shrink-0">✓</span>
+                                    <span><b>1.5x Earning:</b> 15 points per $1 spent</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5 text-amber-700 font-bold">
+                                    <span className="text-amber-600 shrink-0">★</span>
+                                    <span><b>Free Deliveries:</b> Permanent free shipping</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5">
+                                    <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                                    <span>Access to secret Buy-1-Get-1 vouchers</span>
+                                  </li>
+                                  <li className="flex items-start gap-1.5 text-orange-700 font-bold">
+                                    <span className="text-orange-600 shrink-0">★</span>
+                                    <span>1-on-1 instant operator dispatch overrides</span>
+                                  </li>
+                                </ul>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* CURRENT CUSTOMER REWARD TRACKER METER */}
+                      {(() => {
+                        const tier = getCurrentTier(loyaltyPoints);
+                        const isGold = tier.type === 'Gold';
+                        const isSilver = tier.type === 'Silver';
+                        const glowClass = isGold ? 'glow-hover-gold' : isSilver ? 'glow-hover-silver' : 'glow-hover-bronze';
+                        const glowStyle = isGold 
+                          ? { '--glow-shadow': 'rgba(245, 158, 11, 0.35)', '--glow-border': '#fbbf24' }
+                          : isSilver
+                            ? { '--glow-shadow': 'rgba(156, 163, 175, 0.35)', '--glow-border': '#9ca3af' }
+                            : { '--glow-shadow': 'rgba(180, 83, 9, 0.35)', '--glow-border': '#ea580c' };
+                        return (
+                          <div 
+                            className={`bg-gradient-to-r ${tier.bgClass} text-white rounded-3xl p-6 shadow-md mb-8 relative overflow-hidden text-left border ${tier.border} tier-card-active ${glowClass}`}
+                            style={glowStyle as React.CSSProperties}
+                          >
+                            <div className="absolute right-6 top-6 text-white/10 text-6xl font-black select-none pointer-events-none">
+                              {tier.icon}
+                            </div>
+                            <div className="relative">
+                              <span className={`text-[9px] uppercase font-extrabold px-2.5 py-1 rounded-md shadow-sm mr-2 ${
+                                tier.type === 'Gold' ? 'badge-premium-gold' : tier.type === 'Silver' ? 'badge-premium-silver' : 'badge-premium-bronze'
+                              }`}>{tier.name} Status Level</span>
+                              <h3 className="text-xl font-black mt-3">Diner Rewards Progress</h3>
+                              <p className="text-xs text-white/90 mt-1 max-w-lg font-semibold">{tier.tagline}</p>
+                              
+                              {/* progress gauge */}
+                              <div className="mt-5">
+                                <div className="flex justify-between text-xs font-bold text-white/95 mb-1.5 select-none">
+                                  <span>Current: {loyaltyPoints} PTS</span>
+                                  <span>
+                                    {tier.pointsToNext > 0 ? `Need ${tier.pointsToNext} pts for ${tier.nextTierName}` : '🎉 Maximum loyalty level reached!'}
+                                  </span>
+                                </div>
+                                <div className="w-full h-3 bg-black/25 rounded-full overflow-hidden p-0.5 border border-white/10 relative">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-yellow-300 to-amber-300 rounded-full transition-spring-width relative overflow-hidden" 
+                                    style={{ width: `${tier.percentage}%` }}
+                                  >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shine-sweep" />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Cash Discount Info */}
+                              <div className="mt-4 p-3 bg-black/15 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border border-white/5">
+                                <div>
+                                  <p className="text-xs font-black">💰 Cash Balance reward: ${(loyaltyPoints / 100).toFixed(2)} cash discount available at checkout!</p>
+                                  <p className="text-[10px] text-white/80 font-medium">Your loyalty points translate directly to dollars. Next reward discount level unlocked at { (Math.floor(loyaltyPoints / 100) + 1) * 100 } PTS.</p>
+                                </div>
+                                <button className="bg-white text-orange-950 px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 hover:bg-orange-50 transition-colors cursor-pointer" onClick={() => setShowLoyalty(false)}>
+                                  Redeem At Checkout
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* ACTIONS TO EARN & SANDBOX SIMULATOR */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         
-                        {/* VIP Status Card */}
-                        <div className={`p-6 rounded-2xl border ${isVip ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-200' : 'bg-zinc-50 border-zinc-200'}`}>
-                          <div className="flex items-start justify-between mb-2">
-                             <h3 className="text-lg font-black text-slate-800">{isVip ? 'VIP Member' : 'Standard Tier'}</h3>
-                             {isVip && <span className="bg-orange-600 text-white text-[10px] uppercase font-bold px-2 py-1 rounded-full shadow-sm">Active</span>}
-                          </div>
-                          <p className="text-xs text-zinc-600 leading-relaxed mb-4">
-                             {isVip ? 'You have unlocked lifetime VIP status! Enjoy free deliveries on every order and exclusive surprise perks.' : 'Earn 5000 points to unlock lifetime VIP status for permanent free delivery on all orders!'}
-                          </p>
-                          
-                          {!isVip && (
-                             <div className="relative w-full h-2 bg-zinc-200 rounded-full overflow-hidden mt-4">
-                                <div className="absolute top-0 left-0 h-full bg-orange-500 rounded-full transition-all" style={{ width: `${Math.min(100, (loyaltyPoints / 5000) * 100)}%`}}></div>
-                             </div>
-                          )}
-                          {!isVip && <p className="text-[10px] text-zinc-400 mt-1.5 font-medium">{Math.max(0, 5000 - loyaltyPoints)} points until VIP</p>}
-                        </div>
-
                         {/* Earn Points Actions */}
                         <div className="flex flex-col gap-3">
-                          <h4 className="text-sm font-bold text-slate-800">Earn More Points</h4>
+                          <h4 className="text-base font-extrabold text-slate-800 text-left flex items-center gap-1.5 pb-2 border-b border-zinc-150">
+                            <TrendingUp className="w-4 h-4 text-emerald-600" />
+                            Earn Points Options
+                          </h4>
                           
                           <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex justify-between items-center shadow-sm">
-                            <div>
-                               <p className="text-xs font-black text-slate-800 text-left">Order Food</p>
-                               <p className="text-[10px] text-zinc-500 mt-0.5 text-left">10 points for every $1 spent</p>
+                            <div className="text-left">
+                               <p className="text-xs font-black text-slate-800">Order Food & Snacks</p>
+                               <p className="text-[10px] text-zinc-500 mt-0.5">Every dollar matches raw points. Earning boost based on tier (up to 1.5x!).</p>
                             </div>
-                            <button onClick={() => setShowLoyalty(false)} className="bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">Order Now</button>
+                            <button onClick={() => setShowLoyalty(false)} className="bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black px-4 py-2 rounded-xl transition-colors shrink-0 cursor-pointer">Order Now</button>
                           </div>
 
                           <div className="bg-white p-4 rounded-2xl border border-zinc-200 flex justify-between items-center shadow-sm">
-                            <div>
-                               <p className="text-xs font-black text-slate-800 text-left">Refer a Friend</p>
-                               <p className="text-[10px] text-zinc-500 mt-0.5 text-left">Earn 500 points per referral</p>
+                            <div className="text-left">
+                               <p className="text-xs font-black text-slate-800">Refer Google Coworkers</p>
+                               <p className="text-[10px] text-zinc-500 mt-0.5">Earn +500 instant loyalty boost coins per registration.</p>
                             </div>
                             <button 
                               onClick={() => {
                                 setLoyaltyPoints(prev => prev + 500);
-                                addToast('Referral Sent!', '500 bonus points have been added to your account!', <Star className="text-orange-500 w-5 h-5" />);
+                                addToast('Referral Boost Claimed', '500 bonus points have been added to your sandbox account!', <Star className="text-orange-500 w-5 h-5" />);
                               }} 
-                              className="bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-200 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
-                            >Share Link</button>
+                              className="bg-orange-100 hover:bg-orange-200 text-orange-900 border border-orange-200 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-colors shrink-0 cursor-pointer"
+                            >
+                              Share Link (+500 PTS)
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Sandbox Interactive Controller */}
+                        <div className="flex flex-col gap-3">
+                          <h4 className="text-base font-extrabold text-slate-800 text-left flex items-center gap-1.5 pb-2 border-b border-zinc-150">
+                            <Activity className="w-4 h-4 text-orange-500" />
+                            Sandbox Loyalty Simulator
+                          </h4>
+                          
+                          <div className="bg-zinc-50/70 p-4 border border-zinc-200 rounded-2xl text-left flex flex-col justify-between h-full min-h-[140px]">
+                            <p className="text-[11px] text-zinc-500 leading-relaxed font-semibold mb-3">
+                              Configure the point balance of your virtual diner and watch the active perks and tier cards update instantly!
+                            </p>
+                            
+                            <div className="grid grid-cols-2 gap-2">
+                              <button 
+                                onClick={() => {
+                                  setLoyaltyPoints(150);
+                                  addToast('Bronze Level Set', 'Points simulation configured to 150 PTS (Bronze Tier).');
+                                }}
+                                className={`py-2 px-1 text-[10px] font-bold rounded-xl border transition-all text-center cursor-pointer ${
+                                  loyaltyPoints < 500 ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-105'
+                                }`}
+                              >
+                                Bronze (150 PTS)
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setLoyaltyPoints(850);
+                                  addToast('Silver Level Set', 'Points simulation configured to 850 PTS (Silver Tier).');
+                                }}
+                                className={`py-2 px-1 text-[10px] font-bold rounded-xl border transition-all text-center cursor-pointer ${
+                                  loyaltyPoints >= 500 && loyaltyPoints < 1500 ? 'bg-zinc-700 text-white border-zinc-700' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-105'
+                                }`}
+                              >
+                                Silver (850 PTS)
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setLoyaltyPoints(2250);
+                                  addToast('Gold Level Set', 'Points simulation configured to 2250 PTS (Gold Tier).');
+                                }}
+                                className={`py-2 px-1 text-[10px] font-bold rounded-xl border transition-all text-center cursor-pointer ${
+                                  loyaltyPoints >= 1500 && loyaltyPoints < 5000 ? 'bg-amber-655 text-white border-amber-655' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-105'
+                                }`}
+                              >
+                                Gold (2250 PTS)
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setLoyaltyPoints(5200);
+                                  setIsVip(true);
+                                  addToast('Gold VIP Elite Active', 'Points simulation configured to 5200 PTS (Gold Elite VIP).');
+                                }}
+                                className={`py-2 px-1 text-[10px] font-bold rounded-xl border transition-all text-center cursor-pointer ${
+                                  loyaltyPoints >= 5000 ? 'bg-red-700 text-white border-red-700' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-105'
+                                }`}
+                              >
+                                Elite Gold VIP (5200 PTS)
+                              </button>
+                            </div>
+                            
+                            <div className="flex gap-2 mt-4 items-center">
+                              <span className="text-[10px] font-bold text-zinc-400">Add PTS Increments:</span>
+                              <button onClick={() => setLoyaltyPoints(prev => prev + 50)} className="text-[10px] bg-zinc-200 hover:bg-zinc-300 text-slate-800 font-extrabold px-2 py-1 rounded-lg transition-transform active:scale-95 cursor-pointer">+50</button>
+                              <button onClick={() => setLoyaltyPoints(prev => prev + 250)} className="text-[10px] bg-zinc-200 hover:bg-zinc-300 text-slate-800 font-extrabold px-2 py-1 rounded-lg transition-transform active:scale-95 cursor-pointer">+250</button>
+                              <button onClick={() => setLoyaltyPoints(0)} className="text-[10px] text-rose-600 hover:underline font-bold ml-auto cursor-pointer">Reset Zero</button>
+                            </div>
                           </div>
                         </div>
 
                       </div>
 
-                      {/* Points History dummy */}
-                      <div className="mt-8">
-                         <h4 className="text-sm font-bold text-slate-800 border-b border-zinc-100 pb-2 mb-3 text-left">Recent Activity</h4>
-                         <div className="flex flex-col gap-2">
-                           <div className="flex justify-between items-center text-xs text-zinc-600 bg-zinc-50 p-2.5 rounded-xl border border-zinc-100">
-                             <span>Welcome Bonus</span>
-                             <span className="font-bold text-green-600">+150 pts</span>
-                           </div>
-                         </div>
+                      {/* LOYALTY LEADERBOARD SECTION */}
+                      <div className="mt-8 border-t border-zinc-150 pt-6">
+                        <div className="flex justify-between items-center mb-4 text-left">
+                          <div>
+                            <h4 className="text-lg font-black text-slate-800 tracking-tight flex items-center gap-1.5">
+                              <Trophy className="w-5 h-5 text-amber-500" />
+                              Loyalty Leaderboard
+                            </h4>
+                            <p className="text-[11px] text-zinc-500 font-semibold">
+                              Top 5 earners in the FoodRush community. Points update live with orders!
+                            </p>
+                          </div>
+                          <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest bg-zinc-100 px-2 py-1 rounded-md">
+                            Live Rankings
+                          </span>
+                        </div>
+
+                        {(() => {
+                          const competitors = [
+                            {
+                              name: "Sarah Jenkins",
+                              email: "sjenkins@google.com",
+                              points: 4320,
+                              avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
+                              isCurrentUser: false
+                            },
+                            {
+                              name: "Alex Rivera",
+                              email: "rivera.alex@google.com",
+                              points: 2150,
+                              avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150",
+                              isCurrentUser: false
+                            },
+                            {
+                              name: "Kenji Takahashi",
+                              email: "t.kenji@google.com",
+                              points: 1280,
+                              avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150",
+                              isCurrentUser: false
+                            },
+                            {
+                              name: "Emily Chen",
+                              email: "chen.emily@google.com",
+                              points: 950,
+                              avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150",
+                              isCurrentUser: false
+                            },
+                            {
+                              name: "David Kim",
+                              email: "david.k@google.com",
+                              points: 410,
+                              avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150",
+                              isCurrentUser: false
+                            }
+                          ];
+
+                          const activeUserEntry = {
+                            name: userSession?.name || 'Aman Ahmed',
+                            email: userSession?.email || 'amanfmfb1215@gmail.com',
+                            points: loyaltyPoints,
+                            avatar: userSession?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
+                            isCurrentUser: true
+                          };
+
+                          // Sort combined entries dynamically
+                          const sortedLeaderboard = [...competitors, activeUserEntry]
+                            .sort((a, b) => b.points - a.points);
+
+                          // Find active user's index in full list
+                          const activeUserRank = sortedLeaderboard.findIndex(entry => entry.isCurrentUser) + 1;
+                          const top5 = sortedLeaderboard.slice(0, 5);
+                          const isUserInTop5 = activeUserRank <= 5;
+
+                          return (
+                            <div className="space-y-3">
+                              <div className="bg-zinc-50 border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
+                                <div className="divide-y divide-zinc-200">
+                                  {top5.map((entry, index) => {
+                                    const rank = index + 1;
+                                    const itemTier = getCurrentTier(entry.points);
+                                    let rankBadge = "text-zinc-600 font-bold text-sm bg-zinc-200/50 w-6 h-6 rounded-full flex items-center justify-center";
+                                    if (rank === 1) rankBadge = "text-yellow-600 font-black text-base bg-amber-100/80 w-6 h-6 rounded-full flex items-center justify-center border border-amber-300 shadow-sm animate-pulse";
+                                    if (rank === 2) rankBadge = "text-zinc-500 font-black text-sm bg-zinc-100/95 w-6 h-6 rounded-full flex items-center justify-center border border-zinc-300";
+                                    if (rank === 3) rankBadge = "text-amber-850 font-black text-sm bg-orange-100/60 w-6 h-6 rounded-full flex items-center justify-center border border-orange-200";
+
+                                    return (
+                                      <div 
+                                        key={entry.email} 
+                                        className={`flex items-center justify-between p-3 sm:p-4 transition-colors ${
+                                          entry.isCurrentUser 
+                                            ? 'bg-orange-50/80 border-l-4 border-orange-500 font-semibold' 
+                                            : 'hover:bg-zinc-100/50'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2.5 sm:gap-4 text-left">
+                                          {/* Rank number or emoji */}
+                                          <div className="w-8 flex justify-center shrink-0">
+                                            {rank === 1 ? (
+                                              <span className="text-lg">👑</span>
+                                            ) : (
+                                              <span className={rankBadge}>{rank}</span>
+                                            )}
+                                          </div>
+
+                                          {/* Profile Photo */}
+                                          <div className="relative shrink-0">
+                                            <img 
+                                              src={entry.avatar} 
+                                              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border-2 ${
+                                                entry.isCurrentUser ? 'border-orange-500' : 'border-zinc-200'
+                                              }`} 
+                                              alt={entry.name}
+                                              referrerPolicy="no-referrer"
+                                            />
+                                            <span className="absolute -bottom-1 -right-1 text-xs" title={itemTier.name}>{itemTier.icon}</span>
+                                          </div>
+
+                                          {/* Customer name and tier type */}
+                                          <div className="min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <p className={`text-xs sm:text-sm truncate ${entry.isCurrentUser ? 'font-black text-orange-950' : 'font-bold text-slate-800'}`}>
+                                                {entry.name}
+                                              </p>
+                                              {entry.isCurrentUser && (
+                                                <span className="bg-orange-600 text-white text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md">
+                                                  YOU
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="mt-1 flex items-center gap-1">
+                                              <span className={`text-[9.5px] uppercase font-black px-1.5 py-0.5 rounded shadow-xs ${
+                                                itemTier.type === 'Gold' ? 'badge-premium-gold' : itemTier.type === 'Silver' ? 'badge-premium-silver' : 'badge-premium-bronze'
+                                              }`}>{itemTier.name} Perks</span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Points Count */}
+                                        <div className="flex flex-col items-end shrink-0 text-right">
+                                          <span className={`text-xs sm:text-sm font-black ${entry.isCurrentUser ? 'text-orange-900' : 'text-slate-800'}`}>
+                                            {entry.points.toLocaleString()} PTS
+                                          </span>
+                                          <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">
+                                            {itemTier.multiplier}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Alert details of how many points needed to jump up if user is not in first position! */}
+                              {!isUserInTop5 ? (
+                                <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl p-3 flex items-center justify-between text-left shadow-sm">
+                                  <div className="text-slate-950 font-semibold text-xs leading-relaxed">
+                                    <p className="font-extrabold text-orange-950 flex items-center gap-1.5">
+                                      <Star className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                                      You are ranked #{activeUserRank} globally!
+                                    </p>
+                                    <p className="text-[11px] text-zinc-500">
+                                      Generate just <strong className="text-orange-900">{(sortedLeaderboard[4].points - loyaltyPoints) + 1}</strong> more points to claim a spot in the elite Top 5!
+                                    </p>
+                                  </div>
+                                  <button onClick={() => setLoyaltyPoints(prev => prev + 250)} className="bg-white hover:bg-orange-100 text-orange-950 px-3 py-1.5 rounded-xl border border-orange-200 text-[10px] font-black tracking-tight shrink-0 transition shadow-xs cursor-pointer">
+                                    Boost Points (+250)
+                                  </button>
+                                </div>
+                              ) : (
+                                activeUserRank > 1 && (
+                                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center justify-between text-left shadow-sm">
+                                    <div className="text-slate-950 font-semibold text-xs leading-relaxed">
+                                      <p className="font-extrabold text-amber-950 flex items-center gap-1.5">
+                                        <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                        Rank #{activeUserRank} Elite!
+                                      </p>
+                                      <p className="text-[11px] text-zinc-500">
+                                        You are only <strong className="text-amber-900">{(sortedLeaderboard[activeUserRank - 2].points - loyaltyPoints) + 1}</strong> points away from defeating <strong className="text-zinc-700">{sortedLeaderboard[activeUserRank - 2].name}</strong> for the next rank position!
+                                      </p>
+                                    </div>
+                                    <button onClick={() => setLoyaltyPoints(prev => prev + 100)} className="bg-white hover:bg-yellow-100 text-orange-900 px-3 py-1.5 rounded-xl border border-yellow-300 text-[10px] font-black tracking-tight shrink-0 transition shadow-xs cursor-pointer">
+                                      Step Up (+100)
+                                    </button>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                     </section>
@@ -4496,6 +5029,79 @@ export default function App() {
               {/* ==================================== */}
               {activeProfileTab === 'customer' && (
                 <div className="space-y-4 animate-fade-in text-left">
+                  {/* BEAUTIFUL LOYALTY CARD PORTLET WITH PROGRESS TO NEXT REWARD */}
+                  {(() => {
+                    const tier = getCurrentTier(loyaltyPoints);
+                    return (
+                      <div className={`bg-gradient-to-br ${tier.bgClass} rounded-2xl p-4 sm:p-5 text-white shadow-lg relative overflow-hidden mb-4 border ${tier.border}`}>
+                        <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none" />
+                        <div className="absolute right-4 top-4 text-white/20 select-none text-2xl font-black">
+                          {tier.icon}
+                        </div>
+
+                        <div className="relative">
+                          <div className="flex items-center gap-1.5 uppercase tracking-widest text-[10px] font-black text-rose-50">
+                            <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse shrink-0" />
+                            <span>{tier.badge}</span>
+                          </div>
+                          
+                          <div className="flex items-baseline justify-between mt-1.5">
+                            <div>
+                              <p className="text-3xl font-black tracking-tight">{loyaltyPoints} <span className="text-xs font-bold text-white/80 uppercase font-sans">Points</span></p>
+                              <p className="text-[11px] text-white/95 font-medium mt-1 leading-relaxed">
+                                Equivalent to <span className="underline decoration-wavy decoration-yellow-300 font-black">${(loyaltyPoints / 100).toFixed(2)}</span> cash rewards.
+                              </p>
+                            </div>
+                            
+                            <div className="text-right">
+                              <span className="text-[9px] font-black uppercase tracking-wider bg-black/25 px-2 py-0.5 rounded-md border border-white/10">
+                                {tier.multiplier}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Dynamic Progress Bar */}
+                          <div className="mt-4">
+                            <div className="flex justify-between text-[10px] font-bold mb-1 select-none text-white/90">
+                              <span>
+                                {Math.floor(loyaltyPoints / 100) * 100} PTS
+                              </span>
+                              <span>
+                                Next Cash Off: {(Math.floor(loyaltyPoints / 100) + 1) * 100} PTS
+                              </span>
+                            </div>
+                            
+                            <div className="w-full h-2.5 bg-black/20 rounded-full overflow-hidden p-0.5 border border-white/10 relative">
+                              <div 
+                                className="h-full bg-gradient-to-r from-yellow-300 to-amber-300 rounded-full transition-spring-width relative overflow-hidden"
+                                style={{ width: `${Math.max(4, loyaltyPoints % 100)}%` }}
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shine-sweep" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Milestone Remaining Info */}
+                          <div className="mt-3 flex items-center justify-between text-[11px] text-white bg-black/15 rounded-lg px-2.5 py-1.5 font-bold">
+                            <span className="flex items-center gap-1">
+                              🎁 Next Reward Level
+                            </span>
+                            <span>
+                              Need <strong className="text-yellow-350 text-xs">{100 - (loyaltyPoints % 100)}</strong> pts for next discount!
+                            </span>
+                          </div>
+
+                          {/* Next Tier Upgrade Info */}
+                          {tier.nextTierName && (
+                            <div className="mt-2 text-[10px] text-white/90 font-semibold italic text-right">
+                              📈 {tier.pointsToNext} points away from <span className="font-bold underline">{tier.nextTierName}</span>!
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div>
                     <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-wider mb-1 px-1">Customer Full Name</label>
                     <input

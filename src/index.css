@@ -38,3 +38,105 @@ body {
 .animate-ping-slow {
   animation: ping-slow 3s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
+
+/* Premium smooth spring width transition and shine keyframes */
+@keyframes shine-sweep {
+  0% { transform: translateX(-100%); }
+  40%, 100% { transform: translateX(100%); }
+}
+
+.animate-shine-sweep {
+  animation: shine-sweep 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.transition-spring-width {
+  transition-property: width;
+  transition-duration: 1.2s;
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Scoped inside .loyalty-section within #foodrush-app-container */
+#foodrush-app-container .loyalty-section .badge-premium-gold {
+  background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 25%, #d97706 50%, #fbbf24 75%, #fcd34d 100%);
+  background-size: 200% auto;
+  color: #78350f;
+  font-weight: 900;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  position: relative;
+  overflow: hidden;
+  animation: shine-sweep 4s linear infinite;
+  transition: all 0.3s ease;
+}
+
+#foodrush-app-container .loyalty-section .badge-premium-silver {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 25%, #9ca3af 50%, #e5e7eb 75%, #f3f4f6 100%);
+  background-size: 200% auto;
+  color: #1f2937;
+  font-weight: 900;
+  border: 1px solid rgba(156, 163, 175, 0.5);
+  box-shadow: 0 0 10px rgba(156, 163, 175, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  position: relative;
+  overflow: hidden;
+  animation: shine-sweep 4s linear infinite;
+  transition: all 0.3s ease;
+}
+
+#foodrush-app-container .loyalty-section .badge-premium-bronze {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 25%, #ca8a04 50%, #fed7aa 75%, #ffedd5 100%);
+  background-size: 200% auto;
+  color: #451a03;
+  font-weight: 950;
+  border: 1px solid rgba(180, 83, 9, 0.5);
+  box-shadow: 0 0 10px rgba(180, 83, 9, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  position: relative;
+  overflow: hidden;
+  animation: shine-sweep 4s linear infinite;
+  transition: all 0.3s ease;
+}
+
+#foodrush-app-container .loyalty-section .tier-card-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#foodrush-app-container .loyalty-section .tier-card-active:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 15px 30px var(--glow-shadow, rgba(245, 158, 11, 0.25));
+  border-color: var(--glow-border, #fbbf24);
+  filter: brightness(1.03);
+}
+
+/* Subtle glowing pulse animation on hover */
+@keyframes pulse-gold-glow {
+  0% { box-shadow: 0 0 5px rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.8); }
+  100% { box-shadow: 0 0 5px rgba(245, 158, 11, 0.4); }
+}
+
+@keyframes pulse-silver-glow {
+  0% { box-shadow: 0 0 5px rgba(156, 163, 175, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(156, 163, 175, 0.8); }
+  100% { box-shadow: 0 0 5px rgba(156, 163, 175, 0.4); }
+}
+
+@keyframes pulse-bronze-glow {
+  0% { box-shadow: 0 0 5px rgba(154, 52, 18, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(154, 52, 18, 0.8); }
+  100% { box-shadow: 0 0 5px rgba(154, 52, 18, 0.4); }
+}
+
+#foodrush-app-container .loyalty-section .glow-hover-gold:hover {
+  animation: pulse-gold-glow 2s infinite alternate;
+}
+
+#foodrush-app-container .loyalty-section .glow-hover-silver:hover {
+  animation: pulse-silver-glow 2s infinite alternate;
+}
+
+#foodrush-app-container .loyalty-section .glow-hover-bronze:hover {
+  animation: pulse-bronze-glow 2s infinite alternate;
+}
+
