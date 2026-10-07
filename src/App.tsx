@@ -597,6 +597,7 @@ export default function App() {
 
   // Admin Tab selector
   const [selectedAdminTab, setSelectedAdminTab] = useState<'restaurants' | 'live-orders' | 'analytics'>('analytics');
+  const [adminLedgerSearch, setAdminLedgerSearch] = useState<string>('');
 
   // Restaurant Partner selected workspace
   const [newFoodName, setNewFoodName] = useState<string>('');
@@ -2628,6 +2629,81 @@ export default function App() {
                                   Redeem At Checkout
                                 </button>
                               </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* ACTIVE PRIORITY ORDERS - LOYALTY PRIVILEGE */}
+                      {(() => {
+                        const activePriorityOrders = orders.filter(o => 
+                          o.status !== 'delivered' && o.status !== 'cancelled'
+                        );
+                        
+                        if (activePriorityOrders.length === 0) return null;
+
+                        return (
+                          <div className="mb-8 text-left">
+                            <h4 className="text-lg font-black text-slate-800 tracking-tight flex items-center gap-1.5 mb-4">
+                              <ShoppingBag className="w-5 h-5 text-orange-600" />
+                              Active Reward Priority Orders
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {activePriorityOrders.map(order => {
+                                const rest = restaurants.find(r => r.id === order.restaurantId);
+                                return (
+                                  <div key={order.id} className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-sm hover:border-orange-200 transition-all group">
+                                    <div className="flex justify-between items-start mb-3">
+                                      <div className="flex items-center gap-3 text-left">
+                                        <div className="w-12 h-12 bg-zinc-100 rounded-2xl overflow-hidden border border-zinc-200 group-hover:border-orange-200 transition-colors">
+                                          {rest && <img src={rest.image} className="w-full h-full object-cover" alt={rest.name} />}
+                                        </div>
+                                        <div>
+                                          <h5 className="text-sm font-black text-slate-900 leading-none">{order.restaurantName}</h5>
+                                          <p className="text-[10px] text-zinc-500 font-bold mt-1">Order #{order.id}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-col items-end">
+                                        <span className="text-[9px] font-black uppercase text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 mb-1">
+                                          Priority Dispatch
+                                        </span>
+                                        <span className="text-xs font-black text-slate-800">${order.total.toFixed(2)}</span>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-zinc-100">
+                                      <div className="flex flex-col gap-1 text-left">
+                                        <span className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest">Live Status</span>
+                                        <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
+                                          {order.status}
+                                        </span>
+                                      </div>
+                                      
+                                      <div className="flex flex-col items-end gap-1">
+                                        <span className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest">Est. Prep Time</span>
+                                        {order.status === 'preparing' || order.status === 'placed' || order.status === 'accepted' ? (
+                                          <div className="flex items-center gap-1.5">
+                                            <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                                            <OrderTimer initialMinutes={order.prepTimeRemaining || 15} />
+                                          </div>
+                                        ) : (
+                                          <span className="text-[10px] font-black text-zinc-400 uppercase">Ready for pickup</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <button 
+                                      onClick={() => {
+                                        setActiveOrderId(order.id);
+                                        setShowLoyalty(false);
+                                      }}
+                                      className="w-full mt-4 py-2.5 bg-zinc-50 hover:bg-zinc-900 hover:text-white border border-zinc-200 rounded-xl text-xs font-black transition-all cursor-pointer"
+                                    >
+                                      Track Live Journey
+                                    </button>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -4873,43 +4949,126 @@ export default function App() {
               )}
 
               {/* 3. Transaction Ledger log */}
-              {selectedAdminTab === 'live-orders' && (
-                <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full text-left border-collapse text-xs min-w-[800px]">
-                      <thead>
-                        <tr className="bg-zinc-50 border-b border-zinc-150 font-extrabold text-[#111]">
-                          <th className="p-4">ID</th>
-                          <th className="p-4">Outlets Spot</th>
-                          <th className="p-4">Customer info</th>
-                          <th className="p-4">Amount (USD)</th>
-                          <th className="p-4">State Timeline</th>
-                          <th className="p-4 text-right">Courier Driver</th>
-                          <th className="p-4 text-right">Rating</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {orders.map((order) => (
-                          <tr key={order.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
-                            <td className="p-4 font-mono text-zinc-500 uppercase">#{order.id}</td>
-                            <td className="p-4 font-bold text-slate-950">{order.restaurantName}</td>
-                            <td className="p-4">
-                              <div className="font-bold text-zinc-800">{order.customerName}</div>
-                              <div className="text-[10px] text-zinc-400">{order.customerAddress}</div>
-                            </td>
-                            <td className="p-4 font-mono font-bold text-orange-600">${order.total.toFixed(2)}</td>
-                            <td className="p-4">
-                              <span className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide">{order.status}</span>
-                            </td>
-                            <td className="p-4 text-right text-zinc-600 font-bold">{order.riderName || 'Awaiting Assign'}</td>
-                            <td className="p-4 text-right text-zinc-600 font-bold">{order.rating ? `${order.rating}★` : '-'}</td>
+              {selectedAdminTab === 'live-orders' && (() => {
+                const filteredOrders = orders.filter((order) => {
+                  if (!adminLedgerSearch.trim()) return true;
+                  const query = adminLedgerSearch.toLowerCase().trim();
+                  return (
+                    order.id.toLowerCase().includes(query) ||
+                    (order.customerName || '').toLowerCase().includes(query) ||
+                    (order.restaurantName || '').toLowerCase().includes(query)
+                  );
+                });
+
+                const handleExportCSV = () => {
+                  if (filteredOrders.length === 0) return;
+                  const headers = ['Order ID', 'Restaurant', 'Customer Name', 'Customer Address', 'Total (USD)', 'Status', 'Rider', 'Rating'];
+                  const csvRows = [
+                    headers.join(','),
+                    ...filteredOrders.map(order => [
+                      `#${order.id}`,
+                      `"${order.restaurantName}"`,
+                      `"${order.customerName}"`,
+                      `"${order.customerAddress}"`,
+                      order.total.toFixed(2),
+                      order.status,
+                      `"${order.riderName || 'N/A'}"`,
+                      order.rating || 'N/A'
+                    ].map(field => field.toString().replace(/(\r\n|\n|\r)/gm, ' ')).join(','))
+                  ];
+                  const csvContent = csvRows.join('\n');
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.setAttribute('href', url);
+                  link.setAttribute('download', `foodrush_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                };
+
+                return (
+                  <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm flex flex-col">
+                    {/* Transaction Ledger Search & Filter Header Bar */}
+                    <div className="p-4 border-b border-zinc-150 bg-zinc-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                        <div className="relative w-full sm:w-96">
+                          <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <input
+                            type="text"
+                            value={adminLedgerSearch}
+                            onChange={(e) => setAdminLedgerSearch(e.target.value)}
+                            placeholder="Search by Order ID, customer name, or restaurant..."
+                            className="w-full pl-9 pr-8 py-2 text-xs bg-white border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-900 transition placeholder:text-zinc-400"
+                          />
+                          {adminLedgerSearch && (
+                            <button
+                              onClick={() => setAdminLedgerSearch('')}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-zinc-400 hover:text-zinc-600 rounded-full transition"
+                              title="Clear search"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <button 
+                          onClick={handleExportCSV}
+                          disabled={filteredOrders.length === 0}
+                          className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 text-zinc-700 hover:text-zinc-950 hover:bg-zinc-50 rounded-xl text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Export to CSV
+                        </button>
+                      </div>
+                      <div className="text-xs text-zinc-500 font-semibold self-end sm:self-center">
+                        Showing <span className="font-bold text-slate-900">{filteredOrders.length}</span> of <span className="font-bold text-slate-900">{orders.length}</span> orders
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto w-full">
+                      <table className="w-full text-left border-collapse text-xs min-w-[800px]">
+                        <thead>
+                          <tr className="bg-zinc-50 border-b border-zinc-150 font-extrabold text-[#111]">
+                            <th className="p-4">ID</th>
+                            <th className="p-4">Outlets Spot</th>
+                            <th className="p-4">Customer info</th>
+                            <th className="p-4">Amount (USD)</th>
+                            <th className="p-4">State Timeline</th>
+                            <th className="p-4 text-right">Courier Driver</th>
+                            <th className="p-4 text-right">Rating</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {filteredOrders.length > 0 ? (
+                            filteredOrders.map((order) => (
+                              <tr key={order.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
+                                <td className="p-4 font-mono text-zinc-500 uppercase">#{order.id}</td>
+                                <td className="p-4 font-bold text-slate-950">{order.restaurantName}</td>
+                                <td className="p-4">
+                                  <div className="font-bold text-zinc-800">{order.customerName}</div>
+                                  <div className="text-[10px] text-zinc-400">{order.customerAddress}</div>
+                                </td>
+                                <td className="p-4 font-mono font-bold text-orange-600">${order.total.toFixed(2)}</td>
+                                <td className="p-4">
+                                  <span className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide">{order.status}</span>
+                                </td>
+                                <td className="p-4 text-right text-zinc-600 font-bold">{order.riderName || 'Awaiting Assign'}</td>
+                                <td className="p-4 text-right text-zinc-600 font-bold">{order.rating ? `${order.rating}★` : '-'}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={7} className="p-8 text-center text-zinc-400 font-medium">
+                                No orders found matching &quot;{adminLedgerSearch}&quot;
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Admin Page Premium Footer */}
               <div className="pt-12 mt-auto">
@@ -5072,12 +5231,14 @@ export default function App() {
                             </div>
                             
                             <div className="w-full h-2.5 bg-black/20 rounded-full overflow-hidden p-0.5 border border-white/10 relative">
-                              <div 
-                                className="h-full bg-gradient-to-r from-yellow-300 to-amber-300 rounded-full transition-spring-width relative overflow-hidden"
-                                style={{ width: `${Math.max(4, loyaltyPoints % 100)}%` }}
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${Math.max(4, loyaltyPoints % 100)}%` }}
+                                transition={{ duration: 1, ease: "easeOut" }}
+                                className="h-full bg-gradient-to-r from-yellow-300 to-amber-300 rounded-full relative overflow-hidden"
                               >
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shine-sweep" />
-                              </div>
+                              </motion.div>
                             </div>
                           </div>
 

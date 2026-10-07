@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import { MenuItem, Restaurant, Order, OrderStatus, ChatMessage, Rider, PlatformAnalytics, Review } from './src/types';
 
@@ -7,6 +8,15 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+app.post('/api/log-error', (req, res) => {
+  console.error("========================");
+  console.error("CLIENT EXCEPTION CAUGHT!");
+  console.error(req.body);
+  console.error("========================");
+  fs.writeFileSync('client-error.log', JSON.stringify(req.body, null, 2));
+  res.json({ ok: true });
+});
 
 // ==========================================
 // DB - IN-MEMORY STATE (Seeded Beautifully)
